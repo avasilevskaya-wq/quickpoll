@@ -299,8 +299,8 @@
         el('span', { class: 'opt-bullet' + (multi ? ' sq' : ''), 'aria-hidden': 'true' }),
         inp,
         el('button', {
-          class: 'icon-btn danger', type: 'button', 'aria-label': 'Remove option ' + (j + 1), title: 'Remove', disabled: q.o.length <= 1 ? true : null,
-          onclick: function () { q.o.splice(j, 1); rerenderCard(i); changed(); }
+          class: 'icon-btn danger', type: 'button', 'aria-label': (q.o.length <= 1 ? 'Clear option ' : 'Remove option ') + (j + 1), title: q.o.length <= 1 ? 'Clear' : 'Remove',
+          onclick: function () { if (q.o.length <= 1) q.o[0] = ''; else q.o.splice(j, 1); rerenderCard(i); changed(); }
         }, '✕')
       ]));
     });
@@ -506,8 +506,12 @@
           disabled: busy ? true : null, onclick: function () { openUploadDialog(i, j); }
         }, el('svg', null)),
         el('button', {
-          class: 'icon-btn danger', type: 'button', 'aria-label': 'Remove image ' + (j + 1), title: 'Remove', disabled: (q.o.length <= 1 || busy) ? true : null,
-          onclick: function () { q.o.splice(j, 1); q.i.splice(j, 1); rerenderCard(i); changed(); }
+          class: 'icon-btn danger', type: 'button', 'aria-label': (q.o.length <= 1 ? 'Clear image ' : 'Remove image ') + (j + 1), title: q.o.length <= 1 ? 'Clear' : 'Remove', disabled: busy ? true : null,
+          onclick: function () {
+            if (q.o.length <= 1) { q.o[0] = ''; q.i[0] = ''; }   // keep at least one row — just clear it
+            else { q.o.splice(j, 1); q.i.splice(j, 1); }
+            rerenderCard(i); changed();
+          }
         }, '✕')
       ]));
     });

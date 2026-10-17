@@ -736,6 +736,8 @@
       return { label: lbl.trim(), url: (q.i || [])[idx] || '', idx: idx };
     }).filter(function (it) { return it.url || it.label; });
     var layout = q.y || autoLayout(items) || 'g';
+    var gallery = items.map(function (it, n) { return { url: it.url, value: it.label || ('Option ' + String.fromCharCode(65 + n)) }; })
+      .filter(function (g) { return g.url; });
     var wrap = el('div', { class: 'qp-images qp-lay-' + layout, role: 'radiogroup', 'aria-labelledby': 'qp-q-' + i });
     var pending = 0;
     items.forEach(function (it, n) {
@@ -770,7 +772,7 @@
         ]),
         it.url ? el('button', {
           class: 'qp-zoom', type: 'button', 'aria-label': 'Enlarge ' + value, title: 'Enlarge',
-          onclick: function (e) { e.stopPropagation(); self._lightbox(it.url, value, on, pick); }
+          onclick: function (e) { e.stopPropagation(); self._lightbox(i, gallery, gallery.map(function (g) { return g.url; }).indexOf(it.url)); }
         }, zoomIcon()) : null
       ]);
       wrap.appendChild(card);
@@ -789,25 +791,75 @@
     return svg;
   }
 
-  /* Full-screen view of one picture, with a button to choose it. */
-  Runner.prototype._lightbox = function (url, label, isOn, pick) {
+  /* Full-screen gallery: ‹ › arrows, keyboard ← →, swipe, counter, and "Choose this" for the picture on screen. */
+  Runner.prototype._lightbox = function (qi, gallery, start) {
+    var self = this;
+    if (!gallery.length) return;
+    var idx = Math.max(0, start);
     var prevFocus = document.activeElement;
+    var many = gallery.length > 1;
+    var img = el('img', { alt: '', referrerpolicy: 'no-referrer' });
+    var label = el('span', { class: 'qp-lb-label' });
+    var count = el('div', { class: 'qp-lb-count', 'aria-live': 'polite' });
+    var choose = el('button', { class: 'qp-btn qp-btn-primary qp-lb-choose', type: 'button' });
     var box;
-    var close = function () { box.remove(); document.removeEventListener('keydown', onKey, true); if (prevFocus && prevFocus.focus) prevFocus.focus(); };
-    var onKey = function (e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
-    var closeBtn = el('button', { class: 'qp-lb-close', type: 'button', 'aria-label': 'Close', onclick: close }, '✕');
-    box = el('div', { class: 'qp-lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': label,
-      onclick: function (e) { if (e.target === box) close(); } }, [
-      closeBtn,
-      el('img', { src: url, alt: label, referrerpolicy: 'no-referrer' }),
-      el('div', { class: 'qp-lb-bar' }, [
-        el('span', { class: 'qp-lb-label', text: label }),
-        el('button', { class: 'qp-btn qp-btn-primary', type: 'button', onclick: function () { close(); if (!isOn) pick(); } }, isOn ? 'Selected ✓' : 'Choose this')
-      ])
+    var show = function (n) {
+      idx = (n + gallery.length) % gallery.length;
+      var g = gallery[idx];
+      img.src = g.url; img.alt = g.value;
+      label.textContent = g.value;
+      count.textContent = many ? (idx + 1) + ' / ' + gallery.length : '';
+      var on = (self.answers[qi] || {}).v === g.value;
+      choose.textContent = on ? 'Selected ✓' : 'Choose this';
+      choose.classList.toggle('is-selected', on);
+    };
+    var close = function () {
+      box.remove(); document.removeEventListener('keydown', onKey, true);
+      self.render(true);
+      var again = self.root.querySelectorAll('.qp-zoom')[idx];
+      if (again) again.focus(); else if (prevFocus && prevFocus.focus) prevFocus.focus();
+    };
+    var onKey = function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+      else if (e.key === 'ArrowRight' && many) { e.preventDefault(); e.stopPropagation(); show(idx + 1); }
+      else if (e.key === 'ArrowLeft' && many) { e.preventDefault(); e.stopPropagation(); show(idx - 1); }
+      else if (e.key === 'Enter' && e.target !== choose && !(e.target.classList && e.target.classList.contains('qp-lb-close'))) { e.preventDefault(); e.stopPropagation(); choose.click(); }
+      else e.stopPropagation();   // keep the survey's shortcuts (digits, Enter) from acting behind the viewer
+    };
+    choose.addEventListener('click', function () {
+      var g = gallery[idx];
+      self.setAnswer(qi, { v: g.value });
+      show(idx);
+      setTimeout(close, 180);
+    });
+    var arrow = function (dir) {
+      return el('button', {
+        class: 'qp-lb-arrow qp-lb-' + (dir < 0 ? 'prev' : 'next'), type: 'button',
+        'aria-label': dir < 0 ? 'Previous image' : 'Next image',
+        onclick: function (e) { e.stopPropagation(); show(idx + dir); }
+      }, dir < 0 ? '‹' : '›');
+    };
+    var stage = el('div', { class: 'qp-lb-stage' }, [many ? arrow(-1) : null, img, many ? arrow(1) : null]);
+    box = el('div', { class: 'qp-lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Image viewer',
+      onclick: function (e) { if (e.target === box || e.target === stage) close(); } }, [
+      count,
+      el('button', { class: 'qp-lb-close', type: 'button', 'aria-label': 'Close', onclick: close }, '✕'),
+      stage,
+      el('div', { class: 'qp-lb-bar' }, [label, choose])
     ]);
+    // swipe on touch screens
+    var sx = null, sy = null;
+    stage.addEventListener('touchstart', function (e) { var t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
+    stage.addEventListener('touchend', function (e) {
+      if (sx === null || !many) return;
+      var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) show(idx + (dx < 0 ? 1 : -1));
+      sx = sy = null;
+    });
+    show(idx);
     document.body.appendChild(box);
     document.addEventListener('keydown', onKey, true);
-    closeBtn.focus();
+    choose.focus();
   };
 
   Runner.prototype._text = function (i, q, a) {
