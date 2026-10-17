@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../assets/ui.css?v=1.9">
+<link rel="stylesheet" href="../assets/ui.css?v=2.5">
 <style>
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
@@ -36,7 +36,7 @@
 
   section.comp { margin-bottom: 56px; scroll-margin-top: 80px; }
   section.comp h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.015em; }
-  section.comp > p.lead { margin: 0 0 18px; color: var(--ui-ink-muted); max-width: 680px; font-weight: 500; }
+  section.comp > p.lead { margin: 0 0 18px; color: var(--ui-ink-muted); max-width: 680px; font-weight: 400; }
   .rule { display: inline-block; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin-bottom: 14px;
           background: rgba(var(--ui-glow), .14); color: #8a3a00; }
   :root[data-theme="dark"] .rule { color: #ffb27c; }
@@ -76,7 +76,7 @@
 <body>
 <header class="top">
   <h1>QuickPoll UI</h1>
-  <span class="ver">components · v0.5</span>
+  <span class="ver">components · v1.0</span>
   <span class="sp"></span>
   <div class="seg" role="group" aria-label="Theme">
     <button type="button" data-theme-btn="auto" aria-pressed="true">Auto</button>
@@ -92,9 +92,11 @@
     <a href="#glow">Glow levels</a>
     <p>Buttons</p>
     <a href="#primary">Primary</a>
+    <a href="#primary-dark">Primary dark</a>
     <a href="#secondary">Secondary</a>
     <a href="#ghost">Ghost</a>
     <a href="#icon">Icon button</a>
+    <a href="#surfaces">Buttons on surfaces</a>
     <p>Choice</p>
     <a href="#option">Option</a>
     <a href="#multi">Multi option</a>
@@ -108,6 +110,11 @@
     <p>Switches</p>
     <a href="#toggle">Toggle</a>
     <a href="#segmented">Segmented control</a>
+    <p>Small things</p>
+    <a href="#badge">Badge</a>
+    <a href="#progress">Progress</a>
+    <a href="#toast">Toast</a>
+    <a href="#dialog">Dialog</a>
   </nav>
 
   <main id="main"></main>
@@ -153,9 +160,9 @@
   var YES = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   var NO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>';
   var MOCK = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9d2ff"/><stop offset="1" stop-color="#ffd9c2"/></linearGradient></defs><rect width="320" height="200" fill="url(#g)"/><rect x="24" y="24" width="120" height="14" rx="7" fill="#fff" opacity=".85"/><rect x="24" y="52" width="272" height="96" rx="12" fill="#fff" opacity=".6"/><rect x="24" y="160" width="80" height="18" rx="9" fill="#3b5bfd" opacity=".7"/></svg>');
-  var CSTATES = [['', 'Default'], ['is-hover', 'Hover'], ['is-pressed', 'Pressed'], ['is-selected', 'Selected'], ['is-focus', 'Focus (keyboard)'], ['is-disabled', 'Disabled']];
+  var CSTATES = [['', 'Default'], ['is-hover', 'Hover'], ['is-pressed', 'Pressed'], ['is-selected', 'Selected'], ['is-selected is-selected-hover', 'Selected + hover'], ['is-focus', 'Focus (keyboard)'], ['is-disabled', 'Disabled']];
   function attrs(st) {
-    return (st === 'is-disabled' ? ' disabled' : '') + (st && st !== 'is-disabled' ? ' tabindex="-1"' : '') + ' aria-checked="' + (st === 'is-selected') + '"';
+    return (st === 'is-disabled' ? ' disabled' : '') + (st && st !== 'is-disabled' ? ' tabindex="-1"' : '') + ' aria-checked="' + (st.indexOf('is-selected') === 0) + '"';
   }
   function option(label, st, multi, key) {
     return '<button type="button" role="' + (multi ? 'checkbox' : 'radio') + '" class="ui-option' + (multi ? ' ui-option--multi' : '') + (st ? ' ' + st : '') + '"' + attrs(st) + '>' +
@@ -163,7 +170,7 @@
   }
   function yn(kind, st) {
     var lab = kind === 'yes' ? 'Yes' : 'No';
-    return '<div class="ui-yn__item' + (st === 'is-selected' ? ' is-selected' : '') + '"><button type="button" role="radio" class="ui-yn__btn ui-yn__btn--' + kind + (st ? ' ' + st : '') + '" aria-label="' + lab + '"' + attrs(st) + '>' + (kind === 'yes' ? YES : NO) + '</button><span class="ui-yn__label" aria-hidden="true">' + lab + '</span></div>';
+    return '<div class="ui-yn__item' + (st.indexOf('is-selected') === 0 ? ' is-selected' : '') + '"><button type="button" role="radio" class="ui-yn__btn ui-yn__btn--' + kind + (st ? ' ' + st : '') + '" aria-label="' + lab + '"' + attrs(st) + '>' + (kind === 'yes' ? YES : NO) + '</button><span class="ui-yn__label" aria-hidden="true">' + lab + '</span></div>';
   }
   function key(n, st, sm) { return '<button type="button" role="radio" class="ui-key' + (sm ? ' ui-key--sm' : '') + (st ? ' ' + st : '') + '" aria-label="' + n + '"' + attrs(st) + '>' + n + '</button>'; }
   function imgcard(label, st) {
@@ -217,20 +224,25 @@
       id: 'glow', title: 'Glow levels', lead: 'One warm glow, three strengths. The strong one marks the single most important action on a screen; the others are quiet accents.',
       html: '<div class="canvas"><div class="glows">' +
         '<div class="glow-tile"><div class="glow-demo">' + btn('primary', 'Continue') + '</div><h3>Glow Strong<span class="badge-n">1 per screen</span></h3><p>Halo, white top light, warm cast shadow. Primary button only.</p></div>' +
-        '<div class="glow-tile"><div class="glow-demo"><div class="glow-card ui-glow-soft">Selected answer</div></div><h3>Glow Soft</h3><p>Thin warm rim and a light glow. Selected option, active field, focus.</p></div>' +
+        '<div class="glow-tile"><div class="glow-demo"><div class="glow-card ui-glow-soft">Selected answer</div></div><h3>Glow Soft</h3><p>Faint warm hairline and a whisper of glow. Selected option.</p></div>' +
         '<div class="glow-tile"><div class="glow-demo"><div class="glow-card ui-glow-hint">New feature</div></div><h3>Glow Hint</h3><p>Gradient rim only, no halo. Rare secondary accents.</p></div>' +
         '</div></div>'
     },
     {
       id: 'primary', title: 'Primary button', rule: 'Only one per screen',
-      lead: 'The main next step: Next, Send answers, Get link. Hover makes the glow — orange and white — a bit stronger and the label darker; pressing sinks the button and shortens its shadow.',
+      lead: 'The main next step: Next, Send answers, Get link. Hover lifts the button by 1px and makes the glow a bit stronger; pressing sinks the button and shortens its shadow.',
       html: '<div class="canvas">' + statesRow('primary', 'Next', { trail: 'arrow' }, 'Medium') + statesRow('primary', 'Next', { size: 'sm', trail: 'arrow' }, 'Small') + '</div>' +
         '<div class="canvas"><p class="row-title">Try it</p><div class="live">' + btn('primary', 'Send answers') + btn('primary', 'Next', { trail: 'arrow' }) + btn('primary', 'Get link', { size: 'sm' }) + '</div></div>' +
         code(snippet('primary', 'Next', { trail: 'arrow' }))
     },
     {
+      id: 'primary-dark', title: 'Primary — dark', rule: 'In the system, not used yet',
+      lead: 'An alternative primary without glow: strong and unambiguous. Kept for future use — the warm-glow primary stays the default.',
+      html: '<div class="canvas">' + statesRow('dark', 'Copy link', {}, 'Medium') + '</div>' + code(snippet('dark', 'Copy link', {}))
+    },
+    {
       id: 'secondary', title: 'Secondary button',
-      lead: 'Supporting actions next to the primary one: Previous, Skip, Copy link. Raised surface without glow; on hover it gets a faint warm rim (Glow Hint).',
+      lead: 'Supporting actions next to the primary one: Previous, Skip, Copy link. White raised surface without glow. On hover it lifts by 1px — no orange, so it never competes with the primary.',
       html: '<div class="canvas">' + statesRow('secondary', 'Previous', { lead: 'back' }, 'Medium') + statesRow('secondary', 'Skip', { size: 'sm' }, 'Small') + '</div>' +
         '<div class="canvas"><p class="row-title">Try it — with primary</p><div class="live">' + btn('secondary', 'Previous', { lead: 'back' }) + btn('primary', 'Next', { trail: 'arrow' }) + '</div></div>' +
         code(snippet('secondary', 'Previous', { lead: 'back' }))
@@ -250,8 +262,17 @@
         code(snippet('secondary', 'Upload image', { icon: 'upload' }))
     },
     {
+      id: 'surfaces', title: 'Buttons on surfaces', rule: 'Always white buttons · no gray on gray',
+      lead: 'Buttons are always white. On the gray page they get a softer shadow and half of the primary glow. On white surfaces (dialogs, cards — .ui-surface-white or .ui-dialog) the shadow and glow drop to a quarter, so the primary stays primary without looking dirty.',
+      html: '<div style="display:grid;gap:14px;margin-bottom:14px">' +
+        '<div class="canvas" style="margin:0"><p class="row-title">Gray page · white buttons · glow 50%</p><div class="live" style="justify-content:space-between;max-width:520px">' + btn('secondary', 'Previous', { lead: 'back' }) + btn('primary', 'Next', { trail: 'arrow' }) + '</div></div>' +
+        '<div class="canvas" style="margin:0"><p class="row-title">White surface · white buttons · glow 25%</p><div class="ui-surface-white" style="border-radius:20px;padding:18px 16px;box-shadow:0 0 0 1px var(--ui-line);max-width:560px"><div class="live" style="justify-content:flex-end;gap:8px;max-width:520px;margin-left:auto">' + btn('ghost', 'Cancel') + btn('secondary', 'Open') + btn('primary', 'Copy link') + '</div></div></div>' +
+        '</div>' +
+        code('<!-- gray page: nothing extra, buttons are white by default -->\n<button class="ui-btn ui-btn--primary">…</button>\n\n<!-- white surface: shadow and glow soften automatically -->\n<div class="ui-surface-white"> … </div>')
+    },
+    {
       id: 'option', title: 'Option',
-      lead: 'One answer out of several. Click selects; a second click on the selected option unselects it. The number on the left (keyboard shortcut) appears only on hover — never on touch screens.',
+      lead: 'One answer out of several. Click selects; a second click on the selected option unselects it. Hover on an unselected option shows a thin warm line — a preview of the click; hover on the selected one removes the glow and makes the mark paler — a hint that a click unselects. The number on the left (keyboard shortcut) appears only on hover — never on touch screens.',
       html: '<div class="canvas">' + cstates(function (st) { return option('Calm and minimal', st); }, 230) + '</div>' +
         liveGroup('<div class="live-single" style="display:grid;gap:12px;max-width:420px">' + option('Calm and minimal', '', false, 1) + option('Bold and colourful', '', false, 2) + option('Dark and premium', '', false, 3) + '</div>') +
         code(option('Calm and minimal', '').replace(/<svg[\s\S]*?<\/svg>/g, '<svg>…</svg>'))
@@ -266,7 +287,7 @@
     {
       id: 'yesno', title: 'Yes / No',
       lead: 'Two compact round buttons with only an icon inside — green check, red cross — and the word under the circle. The icon shape tells them apart even without colour.',
-      html: '<div class="canvas">' + grid(CSTATES.map(function (st) { return '<div class="state"><div class="ui-yn">' + yn('yes', st[0]) + yn('no', st[0] === 'is-selected' ? '' : st[0]) + '</div><span class="lbl">' + st[1] + (st[0] === 'is-selected' ? ' (Yes)' : '') + '</span></div>'; }).join(''), 200) + '</div>' +
+      html: '<div class="canvas">' + grid(CSTATES.map(function (st) { return '<div class="state"><div class="ui-yn">' + yn('yes', st[0]) + yn('no', st[0].indexOf('is-selected') === 0 ? '' : st[0]) + '</div><span class="lbl">' + st[1] + (st[0].indexOf('is-selected') === 0 ? ' (Yes)' : '') + '</span></div>'; }).join(''), 200) + '</div>' +
         liveGroup('<div class="ui-yn live-single" role="radiogroup" aria-label="Approve">' + yn('yes', '') + yn('no', '') + '</div>') +
         code(('<div class="ui-yn" role="radiogroup">' + yn('yes', '') + yn('no', '') + '</div>').replace(/<svg[\s\S]*?<\/svg>/g, '<svg>…</svg>'))
     },
@@ -315,6 +336,42 @@
       html: '<div class="canvas"><p class="row-title">States (hover and focus shown on “Grid”)</p>' + grid([['', 'Default'], ['is-hover', 'Hover'], ['is-focus', 'Focus (keyboard)']].map(function (st) { return '<div class="state">' + seg(0, st[0]) + '<span class="lbl">' + st[1] + '</span></div>'; }).join(''), 330) + '</div>' +
         '<div class="canvas"><p class="row-title">Try it</p><div class="live live-seg">' + seg(0, '') + '</div></div>' +
         code(seg(0, ''))
+    },
+    {
+      id: 'badge', title: 'Badge',
+      lead: 'Short status labels. Required is a white pill with a thin orange asterisk; neutral, success and error for statuses.',
+      html: '<div class="canvas"><div class="live">' +
+        '<span class="ui-badge ui-badge--required">Required</span><span class="ui-badge">Draft</span><span class="ui-badge ui-badge--success">Connected</span><span class="ui-badge ui-badge--error">Not sent</span></div></div>' +
+        code('<span class="ui-badge ui-badge--required">Required</span>')
+    },
+    {
+      id: 'progress', title: 'Progress',
+      lead: 'Where the respondent is in the poll. Thin, flat track; the fill is the same airy warm gradient as the toggle.',
+      html: '<div class="canvas" style="display:grid;gap:26px;max-width:520px">' + [1, 3, 5].map(function (n) {
+        return '<div class="ui-progress"><div class="ui-progress__head"><span>Website redesign</span><span>' + n + ' / 5</span></div><div class="ui-progress__track" role="progressbar" aria-valuenow="' + n + '" aria-valuemin="0" aria-valuemax="5"><div class="ui-progress__bar" style="width:' + (n * 20) + '%"></div></div></div>';
+      }).join('') + '</div>' +
+        code('<div class="ui-progress">\n  <div class="ui-progress__head"><span>Website redesign</span><span>2 / 5</span></div>\n  <div class="ui-progress__track" role="progressbar" aria-valuenow="2" aria-valuemin="0" aria-valuemax="5">\n    <div class="ui-progress__bar" style="width:40%"></div>\n  </div>\n</div>')
+    },
+    {
+      id: 'toast', title: 'Toast',
+      lead: 'Short confirmation at the bottom of the screen: Link copied, Question deleted (with Undo), Couldn’t upload. Disappears by itself.',
+      html: '<div class="canvas" style="display:grid;gap:16px;justify-items:start">' +
+        '<div class="ui-toast" role="status">Saved</div>' +
+        '<div class="ui-toast ui-toast--success" role="status"><span class="ui-toast__icon">' + CHECK + '</span>Link copied</div>' +
+        '<div class="ui-toast" role="status">Question deleted<button type="button" class="ui-toast__action">Undo</button></div>' +
+        '<div class="ui-toast ui-toast--error" role="alert"><span class="ui-toast__icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 4v5M8 11.5v.5"/></svg></span>Couldn’t upload the image. Try again.</div></div>' +
+        code('<div class="ui-toast" role="status">Question deleted<button type="button" class="ui-toast__action">Undo</button></div>')
+    },
+    {
+      id: 'dialog', title: 'Dialog',
+      lead: 'Modal window: Share your poll, Settings, Upload image. White card, soft shadow, blurred backdrop. Only one primary action — the rest are secondary.',
+      html: '<div class="canvas ui-backdrop" style="display:grid;place-items:center;padding:56px 20px">' +
+        '<div class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-demo-t"><div class="ui-dialog__head"><h3 class="ui-dialog__title" id="dlg-demo-t">Share your poll</h3>' +
+        '<button type="button" class="ui-btn ui-btn--ghost ui-btn--icon ui-btn--sm" aria-label="Close"><span class="ui-btn__face">' + ICONS.close + '</span></button></div>' +
+        '<p class="ui-dialog__body">Send this link to your client. Answers go straight to your Google Sheet.</p>' +
+        '<label class="ui-field" style="margin-bottom:22px"><span class="ui-label">Link</span><input class="ui-input" type="text" value="avasilevskaya-wq.github.io/quickpoll/s/#zbVL…" readonly></label>' +
+        '<div class="ui-dialog__actions">' + btn('secondary', 'Open') + btn('primary', 'Copy link') + '</div></div></div>' +
+        code('<div class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="t">\n  <div class="ui-dialog__head"><h3 class="ui-dialog__title" id="t">Share your poll</h3>…</div>\n  <p class="ui-dialog__body">…</p>\n  <div class="ui-dialog__actions">…secondary… …primary…</div>\n</div>')
     }
   ];
 
@@ -335,6 +392,9 @@
     }
     b.setAttribute('aria-checked', on ? 'false' : 'true');
     var item = b.closest('.ui-yn__item'); if (item) item.classList.toggle('is-selected', !on);
+    // show the result of the click until the pointer leaves (no "unselect" hint right away)
+    b.classList.add('just-picked');
+    b.addEventListener('mouseleave', function off() { b.classList.remove('just-picked'); b.removeEventListener('mouseleave', off); });
   });
 
   // live segmented control

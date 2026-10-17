@@ -3,23 +3,24 @@
  * Light comes from the upper right: shadows fall down-left.
  * Font: Manrope — every page that uses this file loads it:
  *   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
- * Small text (≤14px) uses weight 500+ so Manrope stays readable.
+ * Weights: headings 700; options, buttons, labels 500–600; descriptive body text 400 (light and airy).
+ * Small UI text (≤14px: labels, captions) stays 500+ so Manrope stays readable.
  */
 
 /* ---------- Tokens ---------- */
 :root {
   /* surfaces */
-  --ui-bg: #e7e7ec;
+  --ui-bg: #f3f3f6;          /* pearl gray page (C) */
   --ui-bg-beam: rgba(255, 255, 255, .55);
-  --ui-face-top: #f3f3f5;
-  --ui-face-bottom: #eaeaed;
+  --ui-face-top: #ffffff;    /* elements are white on the gray page */
+  --ui-face-bottom: #fafafb;
   --ui-face-flat: #efeff2;
   --ui-line: #d9d9e0;
 
   /* text */
   --ui-ink: #3b3e46;          /* default text on buttons */
   --ui-ink-strong: #07080a;   /* hover / pressed */
-  --ui-ink-muted: #5e626c;    /* secondary text, 5.4:1 on --ui-bg */
+  --ui-ink-muted: #5e626c;    /* secondary text, 5.9:1 on --ui-bg */
   --ui-ink-disabled: #9a9ea8;
 
   /* warm glow */
@@ -173,7 +174,7 @@
 }
 .ui-btn--primary:disabled .ui-btn__face::before, .ui-btn--primary.is-disabled .ui-btn__face::before { opacity: 0; }
 
-/* ---------- SECONDARY — raised, no glow (Glow Hint rim on hover) ---------- */
+/* ---------- SECONDARY — raised, no glow; hover = small lift, no orange ---------- */
 .ui-btn--secondary::after {
   inset: 0; z-index: -1; transform: translate(-6%, 22%);
   background: rgba(var(--ui-cast), .32); filter: blur(6px);
@@ -185,7 +186,7 @@
 .ui-btn--secondary:hover .ui-btn__face, .ui-btn--secondary.is-hover .ui-btn__face {
   color: var(--ui-ink-strong);
   box-shadow: inset 0 2px 1px rgba(255, 255, 255, .95), inset 0 -2px 3px rgba(0, 0, 0, .04),
-              0 0 0 1px rgba(var(--ui-glow), .38), 0 0 10px 0 rgba(var(--ui-glow), .16);   /* Glow Hint */
+              0 0 0 1px rgba(255, 255, 255, .5);   /* neutral: hover only lifts (see the end of the file) */
 }
 .ui-btn--secondary:active .ui-btn__face, .ui-btn--secondary.is-pressed .ui-btn__face {
   color: var(--ui-ink-strong); transform: translate(-1px, 2px) scale(.985); transition-duration: var(--ui-t-press);
@@ -220,8 +221,8 @@
 }
 
 /* ---------- Glow levels (for surfaces other than the primary button) ---------- */
-.ui-glow-soft {   /* selected answer, active field, focus */
-  box-shadow: 0 0 0 1.5px rgba(var(--ui-glow), .75), 0 4px 18px rgba(var(--ui-glow), .28), 0 0 10px rgba(var(--ui-glow), .2);
+.ui-glow-soft {   /* selected answer */
+  box-shadow: 0 0 0 1px rgba(var(--ui-glow), .22), 0 0 16px 2px rgba(var(--ui-glow), .14);
 }
 .ui-glow-hint {   /* gradient rim only — rare secondary accents */
   border: 1.5px solid transparent;
@@ -238,10 +239,10 @@
 :root {
   --ui-yes: #18834e; --ui-no: #c4352e;           /* icon colours (≥3:1 on light faces) */
   --ui-mark: #EA8213; --ui-mark-ink: #ffffff;   /* selected mark (checkbox / radio) */
-  --ui-raised: -3px 5px 12px rgba(var(--ui-cast), .26), inset 0 2px 1px rgba(255, 255, 255, .9), inset 0 -2px 3px rgba(0, 0, 0, .03);
-  --ui-raised-hover: -4px 7px 16px rgba(var(--ui-cast), .30), inset 0 2px 1px rgba(255, 255, 255, .95), inset 0 -2px 3px rgba(0, 0, 0, .03);
-  --ui-raised-pressed: -1px 2px 5px rgba(var(--ui-cast), .22), inset 0 2px 6px rgba(120, 110, 120, .14);
-  --ui-soft-ring: 0 0 0 1.5px rgba(var(--ui-glow), .8), 0 4px 18px rgba(var(--ui-glow), .26), 0 0 10px rgba(var(--ui-glow), .2);
+  --ui-raised: -3px 5px 12px rgba(var(--ui-cast), .22), inset 0 2px 1px rgba(255, 255, 255, .9), inset 0 -2px 3px rgba(0, 0, 0, .03);
+  --ui-raised-hover: -4px 7px 16px rgba(var(--ui-cast), .255), inset 0 2px 1px rgba(255, 255, 255, .95), inset 0 -2px 3px rgba(0, 0, 0, .03);
+  --ui-raised-pressed: -1px 2px 5px rgba(var(--ui-cast), .19), inset 0 2px 6px rgba(120, 110, 120, .14);
+  --ui-soft-ring: 0 0 0 1px rgba(var(--ui-glow), .22), 0 0 16px 2px rgba(var(--ui-glow), .14);   /* selected: faint hairline + whisper glow */
 }
 :root[data-theme="dark"] { --ui-yes: #4fd394; --ui-no: #ff7b73; --ui-mark: #EA8213; --ui-mark-ink: #ffffff;
   --ui-raised: -3px 5px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
@@ -362,7 +363,7 @@
    INPUTS — flat: light surface + thin border. Focus = Glow Soft.
    ===================================================================== */
 :root {
-  --ui-field-bg: #f7f7f9;
+  --ui-field-bg: #ffffff;
   --ui-field-border: #d3d4db;
   --ui-field-border-hover: #b9bbc4;
   --ui-error: #b3261e;
@@ -437,8 +438,175 @@
 .ui-seg__btn:hover, .ui-seg__btn.is-hover { color: var(--ui-ink-strong); background: rgba(var(--ui-cast), .07); }
 .ui-seg__btn[aria-pressed="true"], .ui-seg__btn.is-selected {
   color: var(--ui-ink-strong); background: #ffffff;
-  box-shadow: 0 0 0 1px rgba(var(--ui-glow), .32), -1px 2px 6px rgba(var(--ui-cast), .26);   /* even soft warm rim + soft shadow */
+  box-shadow: 0 0 0 1px rgba(var(--ui-glow), .32), -1px 2px 6px rgba(var(--ui-cast), .22);   /* even soft warm rim + soft shadow */
 }
 :root[data-theme="dark"] .ui-seg__btn[aria-pressed="true"], :root[data-theme="dark"] .ui-seg__btn.is-selected { background: #2c2e35; box-shadow: 0 0 0 1px rgba(var(--ui-glow), .4), -1px 2px 6px rgba(0, 0, 0, .4); }
 .ui-seg__btn:focus-visible, .ui-seg__btn.is-focus { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 .ui-seg__btn:disabled { color: var(--ui-ink-disabled); cursor: not-allowed; }
+
+/* =====================================================================
+   SMALL THINGS — badge, progress, toast, dialog. Quiet and flat.
+   ===================================================================== */
+/* Badge */
+.ui-badge {
+  display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 99px;
+  font: 700 11.5px/1 var(--ui-font); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+  background: #f4f4f7; color: var(--ui-ink); box-shadow: inset 0 0 0 1px #e3e4ea;
+}
+.ui-badge--warm { background: rgba(var(--ui-glow), .13); color: #8a3a00; box-shadow: none; }
+/* Required: white pill, hairline, thin orange asterisk. Normal case, not caps. */
+.ui-badge--required {
+  background: #ffffff; color: var(--ui-ink); box-shadow: 0 0 0 1px rgba(150, 148, 166, .22);
+  font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none;
+}
+.ui-badge--required::before { content: ""; flex: none; width: 9px; height: 9px; background: var(--ui-mark); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 1.2v9.6M1.85 3.6l8.3 4.8M1.85 8.4l8.3-4.8' stroke='black' stroke-width='1.3' stroke-linecap='round' fill='none'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 1.2v9.6M1.85 3.6l8.3 4.8M1.85 8.4l8.3-4.8' stroke='black' stroke-width='1.3' stroke-linecap='round' fill='none'/%3E%3C/svg%3E") center / contain no-repeat; }
+:root[data-theme="dark"] .ui-badge--required { background: #26272d; box-shadow: inset 0 0 0 1px #34363e; }
+.ui-badge--success { background: rgba(24, 131, 78, .12); color: #135f39; box-shadow: none; }
+.ui-badge--error { background: rgba(179, 38, 30, .10); color: #93211a; box-shadow: none; }
+:root[data-theme="dark"] .ui-badge { background: #26272d; box-shadow: inset 0 0 0 1px #34363e; }
+:root[data-theme="dark"] .ui-badge--warm { background: rgba(var(--ui-glow), .16); color: #ffb27c; box-shadow: none; }
+:root[data-theme="dark"] .ui-badge--success { background: rgba(79, 211, 148, .14); color: #7fe0b0; box-shadow: none; }
+:root[data-theme="dark"] .ui-badge--error { background: rgba(255, 123, 115, .14); color: #ffa29b; box-shadow: none; }
+
+/* Progress */
+.ui-progress { display: grid; gap: 8px; font-family: var(--ui-font); }
+.ui-progress__head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--ui-ink-muted); }
+.ui-progress__track { height: 6px; border-radius: 99px; background: #fdfdfe; box-shadow: inset 0 0 0 1px #e3e4ea; overflow: hidden; }
+:root[data-theme="dark"] .ui-progress__track { background: #1f2025; box-shadow: inset 0 0 0 1px #34363e; }
+.ui-progress__bar { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd6b0, #f5a04e 55%, var(--ui-mark)); transition: width .35s var(--ui-ease); }
+
+/* Toast */
+.ui-toast {
+  display: inline-flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 12px 10px 16px; border-radius: 16px;
+  font: 500 14.5px var(--ui-font); color: var(--ui-ink-strong);
+  background: #ffffff; box-shadow: 0 0 0 1px #ebebf0, -3px 8px 24px rgba(var(--ui-cast), .255);
+}
+:root[data-theme="dark"] .ui-toast { background: #2a2c33; box-shadow: 0 0 0 1px #3a3c45, -3px 8px 24px rgba(0, 0, 0, .5); }
+.ui-toast__icon { flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+.ui-toast__icon svg { width: 13px; height: 13px; }
+.ui-toast--success .ui-toast__icon { background: rgba(24, 131, 78, .14); color: var(--ui-yes); }
+.ui-toast--error .ui-toast__icon { background: rgba(196, 53, 46, .12); color: var(--ui-no); }
+.ui-toast__action { border: 0; background: none; padding: 6px 10px; border-radius: 9px; font: 700 14px var(--ui-font); color: #9a4a00; cursor: pointer; }
+.ui-toast__action:hover { background: rgba(var(--ui-glow), .10); }
+:root[data-theme="dark"] .ui-toast__action { color: #ffb27c; }
+
+/* Dialog */
+.ui-backdrop { background: rgba(22, 24, 30, .32); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.ui-dialog {
+  width: min(460px, 100%); border-radius: 26px; padding: 26px 26px 22px; font-family: var(--ui-font); color: var(--ui-ink-strong);
+  background: #ffffff; box-shadow: 0 0 0 1px #ebebf0, -6px 18px 50px rgba(var(--ui-cast), .34);
+}
+:root[data-theme="dark"] .ui-dialog { background: #24262c; box-shadow: 0 0 0 1px #34363e, -6px 18px 50px rgba(0, 0, 0, .6); }
+.ui-dialog__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.ui-dialog__title { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.ui-dialog__body { margin: 0 0 22px; font-size: 15px; font-weight: 400; color: var(--ui-ink-muted); line-height: 1.5; }
+.ui-dialog__actions { display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+
+/* =====================================================================
+   BUTTONS ON DIFFERENT SURFACES
+   Buttons are always white. Gray-on-gray is not used.
+   1) Gray page — white buttons, cast shadow ~43% (50% −15%), primary glow 50%.
+   2) White surface (dialog, card) — white buttons, cast shadow ~21% (25% −15%), primary glow 25%.
+   (.ui-btn--light was the opt-in class for white buttons; white is now the default, the class does nothing.)
+   ===================================================================== */
+.ui-btn.ui-btn--primary .ui-btn__face, .ui-btn.ui-btn--secondary .ui-btn__face,
+.ui-surface-white .ui-btn--primary .ui-btn__face, .ui-surface-white .ui-btn--secondary .ui-btn__face,
+.ui-dialog .ui-btn--primary .ui-btn__face, .ui-dialog .ui-btn--secondary .ui-btn__face {
+  background: linear-gradient(180deg, #ffffff, #fafafb);
+}
+.ui-btn.ui-btn--secondary .ui-btn__face,
+.ui-surface-white .ui-btn--secondary .ui-btn__face, .ui-dialog .ui-btn--secondary .ui-btn__face {
+  box-shadow: inset 0 0 0 1px rgba(var(--ui-cast), .22);
+}
+.ui-btn.ui-btn--secondary:hover .ui-btn__face, .ui-btn.ui-btn--secondary.is-hover .ui-btn__face,
+.ui-surface-white .ui-btn--secondary:hover .ui-btn__face, .ui-surface-white .ui-btn--secondary.is-hover .ui-btn__face,
+.ui-dialog .ui-btn--secondary:hover .ui-btn__face, .ui-dialog .ui-btn--secondary.is-hover .ui-btn__face {
+  box-shadow: inset 0 0 0 1px rgba(var(--ui-cast), .22);   /* no orange on secondary hover — it only lifts */
+}
+.ui-btn::after { opacity: .425; }
+.ui-surface-white .ui-btn::after, .ui-dialog .ui-btn::after { opacity: .21; }
+/* ghost on white: a light gray hover surface (white would be invisible) */
+.ui-surface-white .ui-btn--ghost:hover .ui-btn__face, .ui-surface-white .ui-btn--ghost.is-hover .ui-btn__face,
+.ui-dialog .ui-btn--ghost:hover .ui-btn__face, .ui-dialog .ui-btn--ghost.is-hover .ui-btn__face {
+  background: rgba(var(--ui-cast), .12); box-shadow: none;
+}
+:root[data-theme="dark"] .ui-btn.ui-btn--primary .ui-btn__face, :root[data-theme="dark"] .ui-btn.ui-btn--secondary .ui-btn__face,
+:root[data-theme="dark"] .ui-surface-white .ui-btn--primary .ui-btn__face, :root[data-theme="dark"] .ui-surface-white .ui-btn--secondary .ui-btn__face,
+:root[data-theme="dark"] .ui-dialog .ui-btn--primary .ui-btn__face, :root[data-theme="dark"] .ui-dialog .ui-btn--secondary .ui-btn__face {
+  background: linear-gradient(180deg, #33353d, #2c2e35);
+}
+.ui-surface-white { background: #ffffff; }
+:root[data-theme="dark"] .ui-surface-white { background: #24262c; }
+
+/* ---------- PRIMARY DARK — alternative primary, no glow. Kept in the system, not used yet. ---------- */
+.ui-btn--dark .ui-btn__face { background: #23262d; color: #ffffff; box-shadow: none; }
+.ui-btn--dark::after { inset: 0; z-index: -1; transform: translate(-6%, 22%); background: rgba(35, 38, 45, .45); filter: blur(6px); }
+.ui-btn--dark:hover .ui-btn__face, .ui-btn--dark.is-hover .ui-btn__face { background: #15171c; color: #ffffff; }
+.ui-btn--dark:active .ui-btn__face, .ui-btn--dark.is-pressed .ui-btn__face { transform: translate(-1px, 2px) scale(.985); transition-duration: var(--ui-t-press); }
+.ui-btn--dark:active::after, .ui-btn--dark.is-pressed::after { transform: translate(-2.5%, 9%); transition-duration: var(--ui-t-press); }
+.ui-btn--dark:disabled .ui-btn__face, .ui-btn--dark.is-disabled .ui-btn__face { background: var(--ui-face-flat); color: var(--ui-ink-disabled); box-shadow: inset 0 0 0 1px var(--ui-line); transform: none; }
+:root[data-theme="dark"] .ui-btn--dark .ui-btn__face { background: #f1f2f4; color: #15171b; }
+
+/* ---------- Primary glow by surface: gray page 50% · white surface 25% ---------- */
+.ui-btn.ui-btn--primary::before { opacity: .5; }
+.ui-btn.ui-btn--primary .ui-btn__face::before { opacity: .25; }
+.ui-btn.ui-btn--primary .ui-btn__face {
+  box-shadow: inset 0 2px 1px rgba(255, 255, 255, .9), inset 0 -2px 3px rgba(var(--ui-glow), .13), 0 0 0 1px rgba(var(--ui-glow-white), .35),
+    0 2px 0 0 rgba(var(--ui-glow), .45), 0 4px 10px 0 rgba(var(--ui-glow), .3), 0 0 14px 2px rgba(var(--ui-glow), .19), 0 0 34px 8px rgba(var(--ui-glow-soft), .18);
+}
+.ui-btn.ui-btn--primary::after { background: linear-gradient(180deg, rgba(var(--ui-glow), .35) 0%, rgba(var(--ui-cast), .42) 40%, rgba(var(--ui-cast), .3) 100%); }
+
+.ui-surface-white .ui-btn--primary::before, .ui-dialog .ui-btn--primary::before { opacity: .25; }
+.ui-surface-white .ui-btn--primary .ui-btn__face::before, .ui-dialog .ui-btn--primary .ui-btn__face::before { opacity: .1; }
+.ui-surface-white .ui-btn--primary .ui-btn__face, .ui-dialog .ui-btn--primary .ui-btn__face {
+  box-shadow: inset 0 2px 1px rgba(255, 255, 255, .9), inset 0 -2px 3px rgba(var(--ui-glow), .07), 0 0 0 1px rgba(var(--ui-cast), .2),
+    0 2px 0 0 rgba(var(--ui-glow), .24), 0 4px 10px 0 rgba(var(--ui-glow), .15), 0 0 14px 2px rgba(var(--ui-glow), .1);
+}
+.ui-surface-white .ui-btn--primary::after, .ui-dialog .ui-btn--primary::after { background: linear-gradient(180deg, rgba(var(--ui-glow), .18) 0%, rgba(var(--ui-cast), .42) 40%, rgba(var(--ui-cast), .3) 100%); }
+/* hover still brightens a little on quieter surfaces */
+.ui-btn.ui-btn--primary:hover::before, .ui-btn.ui-btn--primary.is-hover::before { opacity: .75; }
+.ui-surface-white .ui-btn--primary:hover::before, .ui-surface-white .ui-btn--primary.is-hover::before,
+.ui-dialog .ui-btn--primary:hover::before, .ui-dialog .ui-btn--primary.is-hover::before { opacity: .45; }
+
+/* disabled always wins over the white-button defaults above */
+.ui-btn.ui-btn--primary:disabled .ui-btn__face, .ui-btn.ui-btn--primary.is-disabled .ui-btn__face,
+.ui-btn.ui-btn--secondary:disabled .ui-btn__face, .ui-btn.ui-btn--secondary.is-disabled .ui-btn__face {
+  color: var(--ui-ink-disabled); background: var(--ui-face-flat); box-shadow: inset 0 0 0 1px var(--ui-line); transform: none;
+}
+
+/* ---------- HOVER = small lift (primary and secondary) ----------
+   The face rises 1px and the cast shadow gets a little longer.
+   Primary also gets its glow a bit stronger (see "hover still brightens" above). */
+.ui-btn--primary:hover:not(:active):not(:disabled):not(.is-disabled) .ui-btn__face, .ui-btn--primary.is-hover .ui-btn__face,
+.ui-btn--secondary:hover:not(:active):not(:disabled):not(.is-disabled) .ui-btn__face, .ui-btn--secondary.is-hover .ui-btn__face {
+  transform: translateY(-1px); color: var(--ui-ink-strong);
+}
+.ui-btn--primary:hover:not(:active):not(:disabled):not(.is-disabled)::after, .ui-btn--primary.is-hover::after { transform: translate(-8%, 42%); }
+.ui-btn--secondary:hover:not(:active):not(:disabled):not(.is-disabled)::after, .ui-btn--secondary.is-hover::after { transform: translate(-7%, 30%); opacity: .6; }
+.ui-surface-white .ui-btn--secondary:hover:not(:active):not(:disabled):not(.is-disabled)::after, .ui-surface-white .ui-btn--secondary.is-hover::after,
+.ui-dialog .ui-btn--secondary:hover:not(:active):not(:disabled):not(.is-disabled)::after, .ui-dialog .ui-btn--secondary.is-hover::after { opacity: .32; }
+
+/* ---------- CHOICE hover: preview, then "click again to unselect" ----------
+   Not selected + hover → thin warm line: "a click will select this" (mark stays empty).
+   Selected + hover     → glow goes away, mark gets paler: "a click will unselect".
+   Right after a click the app adds .just-picked until the pointer leaves,
+   so the person sees the result of the click, not the unselect hint. Touch screens: no hover at all. */
+.ui-option.is-hover:not([aria-checked="true"]):not(.is-selected), .ui-yn__btn.is-hover:not([aria-checked="true"]):not(.is-selected),
+.ui-key.is-hover:not([aria-checked="true"]):not(.is-selected), .ui-imgcard.is-hover:not([aria-checked="true"]):not(.is-selected) {
+  box-shadow: 0 0 0 1px rgba(var(--ui-glow), .38), var(--ui-raised-hover);
+}
+.ui-option.is-selected-hover, .ui-yn__btn.is-selected-hover, .ui-key.is-selected-hover, .ui-imgcard.is-selected-hover { box-shadow: var(--ui-raised-hover); }
+.ui-option.is-selected-hover .ui-option__mark, .ui-imgcard.is-selected-hover .ui-option__mark { opacity: .55; box-shadow: none; }
+@media (hover: hover) {
+  .ui-option:hover:not(:disabled):not(.just-picked):not([aria-checked="true"]), .ui-yn__btn:hover:not(:disabled):not(.just-picked):not([aria-checked="true"]),
+  .ui-key:hover:not(:disabled):not(.just-picked):not([aria-checked="true"]), .ui-imgcard:hover:not(:disabled):not(.just-picked):not([aria-checked="true"]) {
+    box-shadow: 0 0 0 1px rgba(var(--ui-glow), .38), var(--ui-raised-hover);
+  }
+  .ui-option[aria-checked="true"]:hover:not(:disabled):not(.just-picked), .ui-yn__btn[aria-checked="true"]:hover:not(:disabled):not(.just-picked),
+  .ui-key[aria-checked="true"]:hover:not(:disabled):not(.just-picked), .ui-imgcard[aria-checked="true"]:hover:not(:disabled):not(.just-picked) {
+    box-shadow: var(--ui-raised-hover);
+  }
+  .ui-option[aria-checked="true"]:hover:not(:disabled):not(.just-picked) .ui-option__mark,
+  .ui-imgcard[aria-checked="true"]:hover:not(:disabled):not(.just-picked) .ui-option__mark { opacity: .55; box-shadow: none; }
+}
+.ui-option__mark { transition: opacity var(--ui-t) var(--ui-ease), background var(--ui-t) var(--ui-ease), box-shadow var(--ui-t) var(--ui-ease); }
