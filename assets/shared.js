@@ -669,7 +669,7 @@
               self.setAnswer(i, { v: cur });
               self.render(true);
             } else {
-              self.setAnswer(i, { v: o.label });
+              self.setAnswer(i, { v: a.v === o.label ? undefined : o.label });   // second click unselects
               self.render(true);
             }
           }
@@ -689,7 +689,7 @@
         return el('button', {
           class: 'qp-yn qp-yn-' + p[1] + (on ? ' is-on' : ''), type: 'button', role: 'radio',
           'aria-checked': on ? 'true' : 'false', 'data-key': p[1], 'data-autofocus': n === 0 ? true : null,
-          onclick: function () { self.setAnswer(i, { v: p[0] }); self.render(true); }
+          onclick: function () { self.setAnswer(i, { v: a.v === p[0] ? undefined : p[0] }); self.render(true); }
         }, [el('span', { class: 'qp-yn-icon', 'aria-hidden': 'true', text: p[2] }), el('span', { text: p[0] })]);
       }));
   };
@@ -705,7 +705,7 @@
           class: 'qp-scale-btn' + (on ? ' is-on' : ''), type: 'button', role: 'radio',
           'aria-checked': on ? 'true' : 'false', 'aria-label': String(v) + ' of ' + max,
           'data-key': v === 10 ? '0' : String(v), 'data-autofocus': v === 1 ? true : null,
-          onclick: function () { self.setAnswer(i, { v: v }); self.render(true); }
+          onclick: function () { self.setAnswer(i, { v: Number(a.v) === v ? undefined : v }); self.render(true); }
         }, String(v)));
       })(v);
     }
@@ -756,7 +756,7 @@
           });
         }
       }
-      var pick = function () { self.setAnswer(i, { v: value }); self.render(true); };
+      var pick = function () { self.setAnswer(i, { v: a.v === value ? undefined : value }); self.render(true); };
       var card = el('div', { class: 'qp-img-item' }, [
         el('button', {
           class: 'qp-img-opt' + (on ? ' is-on' : ''), type: 'button', role: 'radio',
@@ -802,6 +802,8 @@
     var label = el('span', { class: 'qp-lb-label' });
     var count = el('div', { class: 'qp-lb-count', 'aria-live': 'polite' });
     var choose = el('button', { class: 'qp-btn qp-btn-primary qp-lb-choose', type: 'button' });
+    var badge = el('span', { class: 'qp-lb-badge', 'aria-hidden': 'true', text: '✓' });
+    var frame = el('div', { class: 'qp-lb-frame' }, [img, badge]);
     var box;
     var show = function (n) {
       idx = (n + gallery.length) % gallery.length;
@@ -810,8 +812,10 @@
       label.textContent = g.value;
       count.textContent = many ? (idx + 1) + ' / ' + gallery.length : '';
       var on = (self.answers[qi] || {}).v === g.value;
-      choose.textContent = on ? 'Selected ✓' : 'Choose this';
-      choose.classList.toggle('is-selected', on);
+      choose.textContent = on ? 'Unselect' : 'Choose this';
+      choose.className = 'qp-btn qp-lb-choose ' + (on ? 'qp-btn-secondary' : 'qp-btn-primary');
+      frame.classList.toggle('is-on', on);
+      badge.hidden = !on;
     };
     var close = function () {
       box.remove(); document.removeEventListener('keydown', onKey, true);
@@ -828,9 +832,11 @@
     };
     choose.addEventListener('click', function () {
       var g = gallery[idx];
+      var on = (self.answers[qi] || {}).v === g.value;
+      if (on) { self.setAnswer(qi, { v: undefined }); show(idx); return; }   // unselect, keep the viewer open
       self.setAnswer(qi, { v: g.value });
       show(idx);
-      setTimeout(close, 180);
+      setTimeout(close, 220);
     });
     var arrow = function (dir) {
       return el('button', {
@@ -839,7 +845,7 @@
         onclick: function (e) { e.stopPropagation(); show(idx + dir); }
       }, dir < 0 ? '‹' : '›');
     };
-    var stage = el('div', { class: 'qp-lb-stage' }, [many ? arrow(-1) : null, img, many ? arrow(1) : null]);
+    var stage = el('div', { class: 'qp-lb-stage' }, [many ? arrow(-1) : null, frame, many ? arrow(1) : null]);
     box = el('div', { class: 'qp-lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Image viewer',
       onclick: function (e) { if (e.target === box || e.target === stage) close(); } }, [
       count,

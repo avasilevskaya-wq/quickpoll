@@ -212,7 +212,10 @@ textarea.qp-input { resize: vertical; min-height: 48px; }
 }
 @keyframes qpFade { from { opacity: 0; } to { opacity: 1; } }
 .qp-lb-stage { position: relative; flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
-.qp-lb-stage img { max-width: calc(100% - 112px); max-height: 100%; object-fit: contain; border-radius: 10px; background: #fff; user-select: none; -webkit-user-drag: none; }
+.qp-lb-frame { position: relative; display: flex; max-width: calc(100% - 112px); max-height: 100%; border-radius: 12px; outline: 3px solid transparent; outline-offset: 3px; transition: outline-color .15s; }
+.qp-lb-frame.is-on { outline-color: var(--accent); box-shadow: 0 0 0 9px rgba(59, 91, 253, .25); }
+.qp-lb-frame img { max-width: 100%; max-height: calc(100vh - 160px); object-fit: contain; border-radius: 10px; background: #fff; user-select: none; -webkit-user-drag: none; }
+.qp-lb-badge { position: absolute; top: 10px; left: 10px; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .qp-lb-arrow {
   position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%;
   border: 0; background: rgba(255, 255, 255, .16); color: #fff; font-size: 30px; line-height: 1; padding-bottom: 4px;
@@ -222,7 +225,7 @@ textarea.qp-input { resize: vertical; min-height: 48px; }
 .qp-lb-prev { left: 4px; }
 .qp-lb-next { right: 4px; }
 @media (max-width: 560px) {
-  .qp-lb-stage img { max-width: 100%; }
+  .qp-lb-frame { max-width: 100%; }
   .qp-lb-arrow { top: auto; bottom: -62px; transform: none; width: 44px; height: 44px; }
   .qp-lb-prev { left: 8px; } .qp-lb-next { right: 8px; }
   .qp-lb-bar { padding: 0 56px; }
@@ -235,7 +238,8 @@ textarea.qp-input { resize: vertical; min-height: 48px; }
 .qp-lb-close:hover { background: rgba(255, 255, 255, .24); }
 .qp-lb-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; min-height: 50px; }
 .qp-lb-label { color: #fff; font-weight: 600; font-size: 16px; }
-.qp-lb-choose.is-selected { background: #1f9d63; }
+.qp-lightbox .qp-btn-secondary { background: rgba(255,255,255,.92); color: #15181e; border-color: transparent; }
+.qp-lightbox .qp-btn-secondary:hover { background: #fff; }
 
 /* text */
 .qp-text { font-size: 17px; }
