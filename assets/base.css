@@ -307,3 +307,4 @@ a.qp-btn, a.btn { text-decoration: none; }
 .qp-alert-warn { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--warn-soft); color: var(--warn); margin: 0 0 14px; font-weight: 600; }
 .qp-alert-warn .qp-btn { color: var(--text); }
 
+.qp-lb-badge[hidden] { display: none !important; }

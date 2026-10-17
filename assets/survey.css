@@ -108,3 +108,4 @@ body { background: var(--ui-bg); color: var(--ui-ink-strong); font-family: var(-
   .qp-screen { padding: 36px 8px 48px; }
 }
 @media (hover: none) { .ui-imgcard .ui-option__key, .ui-option__key { display: none; } }
+.qp-lb-badge[hidden] { display: none !important; }

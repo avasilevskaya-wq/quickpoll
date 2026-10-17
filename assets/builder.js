@@ -971,4 +971,20 @@
   survey.q.forEach(ensureShape);
   startPreview();
   render();
+
+  // Opened with #edit=<poll code> (e.g. from Claude Code): load that poll for editing.
+  // The same poll id replaces the previous version, so rebuilding a draft updates it in place.
+  (function () {
+    var m = location.hash.match(/^#edit=(.+)$/);
+    if (!m) return;
+    history.replaceState(null, '', location.pathname + location.search);
+    QP.decode(decodeURIComponent(m[1])).then(function (s) {
+      var had = !!drafts[s.id];
+      delete s.e;
+      drafts[s.id] = { s: s, u: Date.now() };
+      store.set('qp_drafts', drafts);
+      load(s.id);
+      toast(had ? 'Poll updated from the link' : 'Poll opened for editing');
+    }, function () { toast('That edit link looks broken — ask for it again'); });
+  })();
 })();
