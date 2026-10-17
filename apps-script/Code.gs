@@ -8,13 +8,18 @@
 // ---- Settings ----------------------------------------------------------
 var SEND_EMAIL = true;      // email me when a new answer arrives
 var NOTIFY_EMAIL = '';      // leave empty to use your own Google account address
+var IMAGE_FOLDER = 'QuickPoll images';   // Drive folder for images pasted in the builder
 // ------------------------------------------------------------------------
 
 var FIXED = ['Submitted', 'Name', 'Submission ID'];   // columns A, B, C (C is hidden)
 
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  return json_({ ok: true, service: 'QuickPoll', sheet: ss ? ss.getName() : '' });
+  var key = e && e.parameter ? String(e.parameter.key || '') : '';
+  return json_({
+    ok: true, service: 'QuickPoll', sheet: ss ? ss.getName() : '',
+    uploads: true, keyOk: !!key && key === uploadKey_()
+  });
 }
 
 function doPost(e) {
@@ -25,6 +30,8 @@ function doPost(e) {
     return json_({ ok: false, error: 'Bad request' });
   }
   if (!data || data.website) return json_({ ok: true });              // honeypot: silently ignore bots
+  if (data.action === 'upload') return json_(upload_(data));
+  if (data.action) return json_({ ok: false, error: 'Unknown action' });
   if (!/^[a-z0-9]{4,16}$/.test(String(data.sid || '')) || !Array.isArray(data.answers)) {
     return json_({ ok: false, error: 'Bad data' });
   }
@@ -152,11 +159,69 @@ function notify_(ss, sheet, data) {
   });
 }
 
-/* Run this once from the editor (▶ Run) to grant permissions before deploying. */
+/* ---- Images pasted in the builder → Drive folder "QuickPoll images" ---- */
+function upload_(data) {
+  if (!data.key || String(data.key) !== uploadKey_()) return { ok: false, error: 'Wrong upload key — copy it again from the script log' };
+  var m = /^data:(image\/(?:png|jpeg|gif|webp));base64,([A-Za-z0-9+\/=]+)$/.exec(String(data.data || ''));
+  if (!m) return { ok: false, error: 'Only PNG, JPG, GIF or WebP images' };
+  var bytes = Utilities.base64Decode(m[2]);
+  if (bytes.length > 10 * 1024 * 1024) return { ok: false, error: 'Image is too big (max 10 MB)' };
+  var ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }[m[1]];
+  var base = clip_(data.name, 80).replace(/\.[a-z0-9]+$/i, '').replace(/[^\w\- ]+/g, '').trim() || 'image';
+  var stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH-mm-ss');
+  var file = imageFolder_().createFile(Utilities.newBlob(bytes, m[1], stamp + ' ' + base + '.' + ext));
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (err) {
+    file.setTrashed(true);
+    return { ok: false, error: 'Google Drive refused to make the image public (your Workspace admin may block link sharing)' };
+  }
+  var id = file.getId();
+  return { ok: true, id: id, url: 'https://lh3.googleusercontent.com/d/' + id, fallback: 'https://drive.google.com/thumbnail?id=' + id + '&sz=w1600' };
+}
+
+function imageFolder_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('IMAGE_FOLDER_ID');
+  if (id) {
+    try { var f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (err) { /* recreate below */ }
+  }
+  var folder = DriveApp.createFolder(IMAGE_FOLDER);
+  props.setProperty('IMAGE_FOLDER_ID', folder.getId());
+  return folder;
+}
+
+/* A secret that only you know: the builder needs it to upload images. Created once, kept in script properties. */
+function uploadKey_() {
+  var props = PropertiesService.getScriptProperties();
+  var k = props.getProperty('UPLOAD_KEY');
+  if (!k) {
+    k = Utilities.getUuid().replace(/-/g, '').slice(0, 16);
+    props.setProperty('UPLOAD_KEY', k);
+  }
+  return k;
+}
+
+/* Optional clean-up: move images older than N days to the Drive trash. Run it by hand (▶ Run) whenever you like. */
+function cleanupOldImages() {
+  var DAYS = 30;
+  var limit = new Date(Date.now() - DAYS * 24 * 3600 * 1000);
+  var files = imageFolder_().getFiles(), n = 0;
+  while (files.hasNext()) {
+    var f = files.next();
+    if (f.getDateCreated() < limit) { f.setTrashed(true); n++; }
+  }
+  console.log('Moved ' + n + ' old image(s) to the trash.');
+}
+
+/* Run this from the editor (▶ Run) to grant permissions and see your upload key. */
 function authorize() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var folder = imageFolder_();
   console.log('Sheet: ' + ss.getName() + ' · emails left today: ' + MailApp.getRemainingDailyQuota() +
     ' · notifications go to: ' + (NOTIFY_EMAIL || Session.getEffectiveUser().getEmail()));
+  console.log('Images folder on your Drive: ' + folder.getName() + ' — ' + folder.getUrl());
+  console.log('UPLOAD KEY (paste it in the builder → ⚙ Settings): ' + uploadKey_());
 }
 
 // ---- helpers ----

@@ -91,6 +91,10 @@
       <label class="field-label" for="endpoint">Google Sheet connection (Apps Script Web App URL)</label>
       <div class="row"><input class="field" id="endpoint" type="url" placeholder="https://script.google.com/macros/s/…/exec"><button class="btn" id="btn-check" type="button">Check</button></div>
     </div>
+    <div>
+      <label class="field-label" for="upload-key">Upload key (for pasting images)</label>
+      <input class="field" id="upload-key" type="text" autocomplete="off" spellcheck="false" placeholder="From the script log after running “authorize”">
+    </div>
     <div class="note" id="endpoint-status">Answers are sent to this address. Setup takes about 5 minutes — see SETUP.md.</div>
     <div class="row" style="justify-content:flex-end"><button class="btn btn-primary" id="btn-save-settings" type="button">Save</button></div>
   </div>

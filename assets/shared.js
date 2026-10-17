@@ -407,15 +407,19 @@
     var min = this.hasIntro() ? -1 : 0;
     i = Math.max(min, Math.min(i, this.n()));
     this._dir = i >= this.idx ? 1 : -1;
+    if (i >= this.n()) this.returnToReview = false;
     this.idx = i;
     if (this.state !== 'sending') this.state = 'idle';
     this.render(quiet);
   };
-  Runner.prototype.next = function () { this.goTo(this.idx + 1); };
-  Runner.prototype.back = function () { this.goTo(this.idx - 1); };
+  Runner.prototype.next = function () {
+    if (this.returnToReview && this.idx >= 0 && this.idx < this.n()) return this.goTo(this.n());
+    this.goTo(this.idx + 1);
+  };
+  Runner.prototype.back = function () { this.returnToReview = false; this.goTo(this.idx - 1); };
 
   Runner.prototype.reset = function () {
-    this.answers = {}; this.name = ''; this.noteOpen = {};
+    this.answers = {}; this.name = ''; this.noteOpen = {}; this.returnToReview = false;
     this.state = 'idle';
     this.startedAt = new Date().toISOString();
     this._save();
@@ -427,16 +431,18 @@
     QP.store.set(this.opts.storageKey, { answers: this.answers, name: this.name, startedAt: this.startedAt });
   };
 
-  Runner.prototype.setAnswer = function (i, patch, autoAdvance) {
+  Runner.prototype.setAnswer = function (i, patch) {
     var a = this.answers[i] || {};
     for (var k in patch) a[k] = patch[k];
     this.answers[i] = a;
     this._save();
-    if (autoAdvance && !this.noteOpen[i]) {
-      var self = this;
-      clearTimeout(this._timer);
-      this._timer = setTimeout(function () { self.next(); }, 260);
-    }
+  };
+
+  /* Indexes of required questions that have no answer yet. */
+  Runner.prototype.missingRequired = function () {
+    var self = this;
+    return this.survey.q.map(function (q, i) { return q.r && !QP.isAnswered(q, self.answers[i]) ? i : -1; })
+      .filter(function (i) { return i >= 0; });
   };
 
   Runner.prototype.payload = function () {
@@ -518,6 +524,7 @@
     root.appendChild(this._top());
     root.appendChild(wrap);
     if (!quiet && !this.opts.preview) {
+      if (window.scrollY > 0) window.scrollTo(0, 0);
       var f = wrap.querySelector('[data-autofocus]');
       if (f) setTimeout(function () { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }, 30);
     }
@@ -529,13 +536,8 @@
     var inQ = this.idx >= 0 && this.idx < n;
     var pct = this.idx < 0 ? 0 : Math.min(100, Math.round((Math.min(this.idx, n) / Math.max(n, 1)) * 100));
     if (this.state === 'done') pct = 100;
-    var canBack = this.state !== 'done' && this.idx > (this.hasIntro() ? -1 : 0);
     return el('div', { class: 'qp-top' }, [
       el('div', { class: 'qp-top-row' }, [
-        el('button', {
-          class: 'qp-back', type: 'button', 'aria-label': 'Back',
-          disabled: !canBack, onclick: function () { self.back(); }
-        }, '←'),
         el('div', { class: 'qp-top-title', text: this.survey.t || 'Untitled poll' }),
         el('div', { class: 'qp-count', text: inQ ? (this.idx + 1) + ' / ' + n : '' })
       ]),
@@ -571,21 +573,23 @@
     var q = this.survey.q[i];
     var a = this.answers[i] || {};
     var kids = [];
+    if (q.r) {
+      kids.push(el('div', { class: 'qp-req' }, [
+        el('span', { class: 'qp-req-tag', text: 'Required' }),
+        el('span', { class: 'qp-req-note', text: 'You can skip it for now — we’ll remind you before sending.' })
+      ]));
+    }
     kids.push(el('h2', { class: 'qp-q', id: 'qp-q-' + i, text: q.t || 'Untitled question' }));
     var sub = q.h || ({ m: 'Select all that apply' })[q.k] || '';
     if (sub) kids.push(el('p', { class: 'qp-hint', text: sub }));
 
-    var body;
-    var needsNext = false;
-    if (q.k === 's' || q.k === 'm') body = this._choices(i, q, a);
-    else if (q.k === 'y') body = this._yesno(i, q, a);
-    else if (q.k === 'r') body = this._scale(i, q, a);
-    else if (q.k === 'i') body = this._images(i, q, a);
-    else if (q.k === 'x') body = this._text(i, q, a);
-    kids.push(body);
-    if (q.k === 'm' || q.k === 'x' || this.noteOpen[i]) needsNext = true;
+    if (q.k === 's' || q.k === 'm') kids.push(this._choices(i, q, a));
+    else if (q.k === 'y') kids.push(this._yesno(i, q, a));
+    else if (q.k === 'r') kids.push(this._scale(i, q, a));
+    else if (q.k === 'i') kids.push(this._images(i, q, a));
+    else if (q.k === 'x') kids.push(this._text(i, q, a));
 
-    // Optional comment
+    // Optional comment — available at any moment, no auto-advance gets in the way
     if (q.c) {
       if (this.noteOpen[i] || a.note) {
         kids.push(el('textarea', {
@@ -593,7 +597,6 @@
           'aria-label': 'Comment',
           oninput: function (e) { self.setAnswer(i, { note: e.target.value }); }
         }, a.note || ''));
-        needsNext = true;
       } else {
         kids.push(el('button', {
           class: 'qp-link', type: 'button',
@@ -601,21 +604,36 @@
         }, '+ Add a comment'));
       }
     }
-
-    var answered = QP.isAnswered(q, a);
-    var actions = [];
-    if (needsNext || answered) {
-      actions.push(el('button', {
-        class: 'qp-btn qp-btn-primary', type: 'button', 'data-primary': true,
-        disabled: q.r && !answered,
-        onclick: function () { self.next(); }
-      }, i === this.n() - 1 ? 'Review →' : 'Next →'));
-    }
-    if (!q.r && !answered) {
-      actions.push(el('button', { class: 'qp-btn qp-btn-ghost', type: 'button', onclick: function () { self.next(); } }, 'Skip'));
-    }
-    if (actions.length) kids.push(el('div', { class: 'qp-actions' }, actions));
+    kids.push(this._nav(i));
     return kids;
+  };
+
+  /* Bottom navigation: ← Previous on the left; on the right Skip (secondary) until
+   * the question is answered, then Next → (primary). */
+  Runner.prototype._nav = function (i) {
+    var self = this;
+    var q = this.survey.q[i];
+    var answered = QP.isAnswered(q, this.answers[i]);
+    var last = i === this.n() - 1;
+    var toReview = last || this.returnToReview;
+    var minIdx = this.hasIntro() ? -1 : 0;
+    var prev = el('button', {
+      class: 'qp-btn qp-btn-ghost qp-prev', type: 'button',
+      disabled: i <= minIdx ? true : null, 'aria-hidden': i <= minIdx ? 'true' : null,
+      onclick: function () { self.back(); }
+    }, '← Previous');
+    var fwd = answered
+      ? el('button', { class: 'qp-btn qp-btn-primary qp-next', type: 'button', 'data-primary': true, onclick: function () { self.next(); } },
+          toReview ? (this.returnToReview ? 'Back to review →' : 'Review →') : 'Next →')
+      : el('button', { class: 'qp-btn qp-btn-secondary qp-skip', type: 'button', onclick: function () { self.next(); } },
+          toReview ? (this.returnToReview ? 'Back to review' : 'Skip to review') : 'Skip');
+    return el('div', { class: 'qp-nav' }, [prev, fwd]);
+  };
+
+  /* Re-draw only the navigation (keeps focus in text fields while typing). */
+  Runner.prototype._refreshNav = function (i) {
+    var old = this.root.querySelector('.qp-nav');
+    if (old) old.replaceWith(this._nav(i));
   };
 
   function keyFor(idx) { return idx < 9 ? String(idx + 1) : (idx < 35 ? String.fromCharCode(97 + idx - 9) : ''); }
@@ -642,7 +660,7 @@
               self.setAnswer(i, { v: cur });
               self.render(true);
             } else {
-              self.setAnswer(i, { v: o.label }, true);
+              self.setAnswer(i, { v: o.label });
               self.render(true);
             }
           }
@@ -662,7 +680,7 @@
         return el('button', {
           class: 'qp-yn qp-yn-' + p[1] + (on ? ' is-on' : ''), type: 'button', role: 'radio',
           'aria-checked': on ? 'true' : 'false', 'data-key': p[1], 'data-autofocus': n === 0 ? true : null,
-          onclick: function () { self.setAnswer(i, { v: p[0] }, true); self.render(true); }
+          onclick: function () { self.setAnswer(i, { v: p[0] }); self.render(true); }
         }, [el('span', { class: 'qp-yn-icon', 'aria-hidden': 'true', text: p[2] }), el('span', { text: p[0] })]);
       }));
   };
@@ -678,7 +696,7 @@
           class: 'qp-scale-btn' + (on ? ' is-on' : ''), type: 'button', role: 'radio',
           'aria-checked': on ? 'true' : 'false', 'aria-label': String(v) + ' of ' + max,
           'data-key': v === 10 ? '0' : String(v), 'data-autofocus': v === 1 ? true : null,
-          onclick: function () { self.setAnswer(i, { v: v }, true); self.render(true); }
+          onclick: function () { self.setAnswer(i, { v: v }); self.render(true); }
         }, String(v)));
       })(v);
     }
@@ -705,7 +723,7 @@
         return el('button', {
           class: 'qp-img-opt' + (on ? ' is-on' : ''), type: 'button', role: 'radio',
           'aria-checked': on ? 'true' : 'false', 'data-key': keyFor(n), 'data-autofocus': n === 0 ? true : null,
-          onclick: function () { self.setAnswer(i, { v: value }, true); self.render(true); }
+          onclick: function () { self.setAnswer(i, { v: value }); self.render(true); }
         }, [
           el('div', { class: 'qp-img-box' }, img),
           el('div', { class: 'qp-img-cap' }, [
@@ -722,11 +740,9 @@
       class: 'qp-input qp-text', rows: '3', placeholder: 'Type your answer…',
       'aria-labelledby': 'qp-q-' + i, 'data-autofocus': true,
       oninput: function (e) {
+        var had = QP.isAnswered(q, self.answers[i]);
         self.setAnswer(i, { v: e.target.value });
-        var b = self.root.querySelector('[data-primary]');
-        if (b) b.disabled = !!(q.r && !e.target.value.trim());
-        var skip = self.root.querySelector('.qp-btn-ghost');
-        if (skip) skip.style.display = e.target.value.trim() ? 'none' : '';
+        if (had !== QP.isAnswered(q, self.answers[i])) self._refreshNav(i);
       }
     }, a.v || '');
     return ta;
@@ -735,15 +751,27 @@
   Runner.prototype._review = function () {
     var self = this;
     var s = this.survey;
-    var missing = s.q.map(function (q, i) { return q.r && !QP.isAnswered(q, self.answers[i]) ? i : -1; }).filter(function (i) { return i >= 0; });
+    var missing = this.missingRequired();
     var kids = [el('h2', { class: 'qp-q', text: 'Ready to send?' }),
       el('p', { class: 'qp-hint', text: 'Tap any answer to change it.' })];
+    if (missing.length) {
+      kids.push(el('div', { class: 'qp-alert qp-alert-warn', role: 'status' }, [
+        el('span', { text: missing.length === 1
+          ? 'One required question still needs an answer.'
+          : missing.length + ' required questions still need an answer.' }),
+        el('button', { class: 'qp-btn qp-btn-secondary qp-btn-sm', type: 'button', onclick: function () { self.returnToReview = true; self.goTo(missing[0]); } }, 'Answer now →')
+      ]));
+    }
     kids.push(el('ol', { class: 'qp-review' }, s.q.map(function (q, i) {
       var txt = QP.answerText(q, self.answers[i]);
       var note = (self.answers[i] && self.answers[i].note) || '';
-      return el('li', null, el('button', { class: 'qp-review-item' + (missing.indexOf(i) >= 0 ? ' is-missing' : ''), type: 'button', onclick: function () { self.goTo(i); } }, [
+      var miss = missing.indexOf(i) >= 0;
+      return el('li', null, el('button', {
+        class: 'qp-review-item' + (miss ? ' is-missing' : ''), type: 'button',
+        onclick: function () { self.returnToReview = true; self.goTo(i); }
+      }, [
         el('span', { class: 'qp-review-q', text: (i + 1) + '. ' + (q.t || 'Untitled question') }),
-        el('span', { class: 'qp-review-a', text: txt || (q.r ? 'Answer needed' : 'Skipped') }),
+        el('span', { class: 'qp-review-a', text: txt || (q.r ? 'Required — tap to answer' : 'Skipped') }),
         note ? el('span', { class: 'qp-review-note', text: '“' + note + '”' }) : null
       ]));
     })));
@@ -754,11 +782,14 @@
       ]));
     }
     var sending = this.state === 'sending';
-    kids.push(el('div', { class: 'qp-actions' }, el('button', {
-      class: 'qp-btn qp-btn-primary qp-btn-send', type: 'button', 'data-primary': true,
-      disabled: sending || missing.length > 0,
-      onclick: function () { self.submit(); }
-    }, sending ? 'Sending…' : (this.state === 'error' ? 'Try again' : 'Send answers'))));
+    kids.push(el('div', { class: 'qp-nav' }, [
+      el('button', { class: 'qp-btn qp-btn-ghost qp-prev', type: 'button', onclick: function () { self.back(); } }, '← Previous'),
+      el('button', {
+        class: 'qp-btn qp-btn-primary qp-btn-send', type: 'button', 'data-primary': true,
+        disabled: sending || missing.length > 0,
+        onclick: function () { self.submit(); }
+      }, sending ? 'Sending…' : (this.state === 'error' ? 'Try again' : 'Send answers'))
+    ]));
     return kids;
   };
 

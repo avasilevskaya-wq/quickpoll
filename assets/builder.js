@@ -332,23 +332,164 @@
     return wrap;
   }
 
+  /* ---------- Image upload (Ctrl+V / drag & drop / click) ---------- */
+  function uploadKey() { return (store.get('qp_upload_key', '') || '').trim(); }
+
+  // Shrink big images before upload: max 1600px on the long side.
+  function prepareImage(file) {
+    return new Promise(function (resolve, reject) {
+      if (!/^image\/(png|jpeg|gif|webp)$/.test(file.type)) return reject(new Error('Only PNG, JPG, GIF or WebP images'));
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var max = 1600;
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var small = w <= max && h <= max && file.size <= 1.5 * 1024 * 1024;
+        var keepPng = file.type === 'image/png' || file.type === 'image/gif';
+        var finish = function (blob) {
+          URL.revokeObjectURL(url);
+          var fr = new FileReader();
+          fr.onload = function () { resolve(fr.result); };
+          fr.onerror = function () { reject(new Error('Could not read the image')); };
+          fr.readAsDataURL(blob);
+        };
+        if (small && file.type !== 'image/gif') return finish(file);
+        var k = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(h * k);
+        var ctx = c.getContext('2d');
+        if (!keepPng) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); }
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(function (b) { b ? finish(b) : reject(new Error('Could not process the image')); }, keepPng ? 'image/png' : 'image/jpeg', 0.86);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('This file is not a readable image')); };
+      img.src = url;
+    });
+  }
+
+  function uploadImage(file) {
+    var ep = endpoint();
+    if (!ep) return Promise.reject(new Error('Connect your Google Sheet in Settings first'));
+    if (!uploadKey()) return Promise.reject(new Error('needs-key'));
+    return prepareImage(file).then(function (dataUrl) {
+      return fetch(ep, {
+        method: 'POST', redirect: 'follow',
+        body: JSON.stringify({ action: 'upload', key: uploadKey(), name: file.name || 'pasted-image', data: dataUrl })
+      });
+    }).then(function (r) { return r.text(); }).then(function (t) {
+      var j = null; try { j = JSON.parse(t); } catch (e) { /* not JSON */ }
+      if (!j) throw new Error('The script didn’t answer — is the new version deployed?');
+      if (!j.ok) throw new Error(j.error === 'Unknown action' ? 'The script is the old version — deploy the new one (see SETUP.md)' : (j.error || 'Upload failed'));
+      return canLoad(j.url).then(function (ok) { return ok || !j.fallback ? j.url : j.fallback; });
+    });
+  }
+
+  function canLoad(url) {
+    return new Promise(function (resolve) {
+      var img = new Image(), t = setTimeout(function () { resolve(false); }, 8000);
+      img.referrerPolicy = 'no-referrer';
+      img.onload = function () { clearTimeout(t); resolve(true); };
+      img.onerror = function () { clearTimeout(t); resolve(false); };
+      img.src = url;
+    });
+  }
+
+  function filesFrom(dt) {
+    var out = [];
+    if (!dt) return out;
+    if (dt.items && dt.items.length) {
+      for (var n = 0; n < dt.items.length; n++) {
+        var it = dt.items[n];
+        if (it.kind === 'file' && /^image\//.test(it.type)) { var f = it.getAsFile(); if (f) out.push(f); }
+      }
+    } else if (dt.files) {
+      for (var m = 0; m < dt.files.length; m++) if (/^image\//.test(dt.files[m].type)) out.push(dt.files[m]);
+    }
+    return out;
+  }
+
+  var uploading = {};   // "qIndex:row" -> true while an upload runs
+
+  // Put files into rows: start at `row` (if given and empty), then fill empty rows, then add new rows.
+  function addImageFiles(i, files, row) {
+    var q = survey.q[i];
+    if (!q || q.k !== 'i' || !files.length) return;
+    var targets = [];
+    var isFree = function (r) { return !q.i[r] && !uploading[i + ':' + r] && targets.indexOf(r) < 0; };
+    files.forEach(function (_, n) {
+      var t = -1;
+      if (n === 0 && typeof row === 'number' && row < q.o.length && !uploading[i + ':' + row]) t = row;
+      if (t < 0) for (var r = 0; r < q.o.length; r++) if (isFree(r)) { t = r; break; }
+      if (t < 0) { q.o.push(''); q.i.push(''); t = q.o.length - 1; }
+      targets.push(t);
+    });
+    var qref = q;
+    targets.forEach(function (t) { uploading[i + ':' + t] = true; });
+    rerenderCard(i);
+    var done = 0, failed = null;
+    files.forEach(function (file, n) {
+      var t = targets[n];
+      uploadImage(file).then(function (url) {
+        if (survey.q[i] === qref) { qref.i[t] = url; }
+      }, function (err) { failed = err; }).then(function () {
+        delete uploading[i + ':' + t];
+        done++;
+        if (survey.q[i] === qref) rerenderCard(i);
+        changed({ goTo: i });
+        if (done === files.length) {
+          if (failed && failed.message === 'needs-key') {
+            toast('Add your upload key in Settings first');
+            openSettings(true);
+          } else if (failed) {
+            toast(failed.message);
+          } else {
+            toast(files.length === 1 ? 'Image added' : files.length + ' images added');
+          }
+        }
+      });
+    });
+  }
+
+  function pickFiles(i, row) {
+    var inp = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/gif,image/webp', multiple: true, style: 'display:none' });
+    inp.addEventListener('change', function () { addImageFiles(i, Array.prototype.slice.call(inp.files || []), row); inp.remove(); });
+    document.body.appendChild(inp);
+    inp.click();
+  }
+
   function imagesEditor(q, i) {
-    var wrap = el('div', { class: 'opts' });
+    var wrap = el('div', { class: 'opts img-opts' });
     q.o.forEach(function (o, j) {
       var url = q.i[j] || '';
-      var thumb = el('div', { class: 'opt-thumb', 'aria-hidden': 'true' });
+      var busy = !!uploading[i + ':' + j];
+      var thumb = el('button', {
+        class: 'opt-thumb' + (busy ? ' is-busy' : '') + (url ? ' has-img' : ''), type: 'button',
+        title: url ? 'Replace image' : 'Upload image', 'aria-label': (url ? 'Replace image ' : 'Upload image ') + (j + 1),
+        onclick: function () { if (!busy) pickFiles(i, j); }
+      }, busy ? el('span', { class: 'spin', 'aria-hidden': 'true' }) : (url ? null : el('span', { class: 'thumb-plus', 'aria-hidden': 'true', text: '+' })));
       var setThumb = function (u) { var s = QP.safeUrl(u); thumb.style.backgroundImage = s ? 'url("' + s.replace(/"/g, '%22') + '")' : ''; };
       setThumb(url);
+      thumb.addEventListener('dragover', function (e) { e.preventDefault(); thumb.classList.add('is-over'); });
+      thumb.addEventListener('dragleave', function () { thumb.classList.remove('is-over'); });
+      thumb.addEventListener('drop', function (e) {
+        var files = filesFrom(e.dataTransfer);
+        if (!files.length) return;
+        e.preventDefault(); e.stopPropagation();
+        thumb.classList.remove('is-over');
+        addImageFiles(i, files, j);
+      });
       wrap.appendChild(el('div', { class: 'img-row' }, [
         thumb,
         el('input', {
-          class: 'opt-input', type: 'text', value: o, placeholder: 'Label (e.g. ' + String.fromCharCode(65 + j) + ')', 'aria-label': 'Image ' + (j + 1) + ' label', maxlength: '200',
+          class: 'opt-input', type: 'text', value: o, placeholder: 'Label (e.g. ' + String.fromCharCode(65 + j) + ')', 'aria-label': 'Image ' + (j + 1) + ' label', maxlength: '200', 'data-row': String(j),
           oninput: function (e) { q.o[j] = e.target.value; changed(); }
         }),
         el('input', {
-          class: 'opt-input url', type: 'url', value: url, placeholder: 'Image link https://…', 'aria-label': 'Image ' + (j + 1) + ' link', 'data-j': String(j),
+          class: 'opt-input url', type: 'url', value: busy ? '' : url, placeholder: busy ? 'Uploading…' : 'Paste image or link', 'aria-label': 'Image ' + (j + 1) + ' link', 'data-j': String(j), 'data-row': String(j),
+          disabled: busy ? true : null,
           oninput: function (e) { q.i[j] = e.target.value.trim(); setThumb(q.i[j]); changed(); },
           onpaste: function (e) {
+            if (filesFrom(e.clipboardData).length) return; // images are handled by the card
             var txt = (e.clipboardData || window.clipboardData).getData('text');
             var urls = txt.split(/\s+/).filter(function (u) { return QP.safeUrl(u); });
             if (urls.length < 2) return;
@@ -364,17 +505,60 @@
           }
         }),
         el('button', {
-          class: 'icon-btn danger', type: 'button', 'aria-label': 'Remove image ' + (j + 1), title: 'Remove', disabled: q.o.length <= 1 ? true : null,
+          class: 'icon-btn danger', type: 'button', 'aria-label': 'Remove image ' + (j + 1), title: 'Remove', disabled: (q.o.length <= 1 || busy) ? true : null,
           onclick: function () { q.o.splice(j, 1); q.i.splice(j, 1); rerenderCard(i); changed(); }
         }, '✕')
       ]));
     });
-    wrap.appendChild(el('div', { class: 'row' }, [
-      el('button', { class: 'btn btn-sm', type: 'button', onclick: function () { q.o.push(''); q.i.push(''); rerenderCard(i, '.opt-input.url[data-j="' + (q.o.length - 1) + '"]'); changed(); } }, '+ Add image'),
-      el('span', { class: 'paste-tip', text: 'Use direct image links (ending in .png, .jpg…). Tip: paste several links at once.' })
+    wrap.appendChild(el('div', { class: 'img-drop', role: 'button', tabindex: '0',
+      onclick: function () { pickFiles(i); },
+      onkeydown: function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickFiles(i); } }
+    }, [
+      el('strong', { text: 'Paste with Ctrl+V' }),
+      el('span', { text: ' · drop images here · or click to choose files' })
     ]));
     return wrap;
   }
+
+  // Card-level paste & drop for image questions
+  document.addEventListener('paste', function (e) {
+    var files = filesFrom(e.clipboardData);
+    if (!files.length) return;
+    var card = e.target && e.target.closest ? e.target.closest('.qcard') : null;
+    var i = card ? Number(card.getAttribute('data-i')) : activeQ;
+    if (i < 0 || !survey.q[i]) return;
+    if (survey.q[i].k !== 'i') {
+      toast('To use pictures, switch this question to “Image choice”');
+      return;
+    }
+    e.preventDefault();
+    var rowAttr = e.target && e.target.getAttribute ? e.target.getAttribute('data-row') : null;
+    addImageFiles(i, files, rowAttr !== null ? Number(rowAttr) : undefined);
+  });
+  document.addEventListener('dragover', function (e) {
+    var card = e.target && e.target.closest ? e.target.closest('.qcard') : null;
+    if (card && e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) {
+      e.preventDefault();
+      Array.prototype.forEach.call(document.querySelectorAll('.qcard.is-drop'), function (c) { if (c !== card) c.classList.remove('is-drop'); });
+      card.classList.add('is-drop');
+    }
+  });
+  document.addEventListener('dragleave', function (e) {
+    if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.qcard')) {
+      Array.prototype.forEach.call(document.querySelectorAll('.qcard.is-drop'), function (c) { c.classList.remove('is-drop'); });
+    }
+  });
+  document.addEventListener('drop', function (e) {
+    Array.prototype.forEach.call(document.querySelectorAll('.qcard.is-drop'), function (c) { c.classList.remove('is-drop'); });
+    var card = e.target && e.target.closest ? e.target.closest('.qcard') : null;
+    if (!card) return;
+    var files = filesFrom(e.dataTransfer);
+    if (!files.length) return;
+    e.preventDefault();
+    var i = Number(card.getAttribute('data-i'));
+    if (survey.q[i].k !== 'i') { toast('To use pictures, switch this question to “Image choice”'); return; }
+    addImageFiles(i, files);
+  });
 
   function scaleEditor(q, i) {
     var seg = el('div', { class: 'seg', role: 'group', 'aria-label': 'Scale size' }, [5, 10].map(function (m) {
@@ -604,29 +788,38 @@
   }
 
   /* ---------- Settings ---------- */
-  function openSettings() {
+  function openSettings(focusKey) {
     $('endpoint').value = savedEndpoint() || cfg.endpoint || '';
+    $('upload-key').value = uploadKey();
     var st = $('endpoint-status');
     st.className = 'note';
     st.textContent = cfg.endpoint
       ? 'A connection is already set in config.js. Leave as is, or paste another URL to override it in this browser.'
       : 'Paste the Web App URL from Google Apps Script. Setup takes about 5 minutes — see SETUP.md.';
     $('dlg-settings').showModal();
+    if (focusKey === true) $('upload-key').focus();
   }
 
   function looksLikeWebApp(u) { return /^https:\/\/script\.google(usercontent)?\.com\/.+\/exec(\?.*)?$/.test(u); }
 
   function checkEndpoint() {
     var u = $('endpoint').value.trim();
+    var key = $('upload-key').value.trim();
     var st = $('endpoint-status');
     if (!u) { st.className = 'note warn'; st.textContent = 'Paste the URL first.'; return; }
     if (!looksLikeWebApp(u)) { st.className = 'note warn'; st.textContent = 'This doesn’t look like a Web App URL — it should start with https://script.google.com/ and end with /exec.'; return; }
     st.className = 'note'; st.textContent = 'Checking…';
-    fetch(u + (u.indexOf('?') >= 0 ? '&' : '?') + 'ping=1', { redirect: 'follow' })
+    fetch(u + (u.indexOf('?') >= 0 ? '&' : '?') + 'ping=1' + (key ? '&key=' + encodeURIComponent(key) : ''), { redirect: 'follow' })
       .then(function (r) { return r.json(); })
       .then(function (j) {
-        if (j && j.ok) { st.className = 'note ok'; st.textContent = 'Connected ✓ Answers will go to “' + (j.sheet || 'your sheet') + '”.'; }
-        else throw new Error();
+        if (!j || !j.ok) throw new Error();
+        var msg = 'Connected ✓ Answers go to “' + (j.sheet || 'your sheet') + '”.';
+        var cls = 'note ok';
+        if (j.uploads === undefined) { msg += ' Image upload needs the new script version — see SETUP.md.'; cls = 'note warn'; }
+        else if (!key) { msg += ' Add the upload key to paste images.'; cls = 'note warn'; }
+        else if (j.keyOk) msg += ' Image upload is on ✓';
+        else { msg += ' But the upload key doesn’t match — copy it again from the script log.'; cls = 'note warn'; }
+        st.className = cls; st.textContent = msg;
       })
       .catch(function () {
         st.className = 'note err';
@@ -638,8 +831,10 @@
     var u = $('endpoint').value.trim();
     if (u && !looksLikeWebApp(u)) { checkEndpoint(); return; }
     if (u === (cfg.endpoint || '').trim()) store.del('qp_endpoint'); else store.set('qp_endpoint', u);
+    var key = $('upload-key').value.trim();
+    if (key) store.set('qp_upload_key', key); else store.del('qp_upload_key');
     $('dlg-settings').close();
-    toast(u ? 'Connection saved' : 'Connection removed');
+    toast('Settings saved');
   }
 
   /* ---------- Get link ---------- */
@@ -718,7 +913,7 @@
   $('btn-link').addEventListener('click', openLink);
   $('btn-new').addEventListener('click', openNewDialog);
   $('btn-polls').addEventListener('click', openPolls);
-  $('btn-settings').addEventListener('click', openSettings);
+  $('btn-settings').addEventListener('click', function () { openSettings(); });
   $('btn-check').addEventListener('click', checkEndpoint);
   $('btn-save-settings').addEventListener('click', saveSettings);
   $('btn-import').addEventListener('click', importLink);
