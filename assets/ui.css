@@ -1,0 +1,359 @@
+/* QuickPoll UI — design tokens + components.
+ * Single source of truth: the showcase (/ui/) and, later, the app use this file.
+ * Light comes from the upper right: shadows fall down-left.
+ * Font: Manrope — every page that uses this file loads it:
+ *   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+ * Small text (≤14px) uses weight 500+ so Manrope stays readable.
+ */
+
+/* ---------- Tokens ---------- */
+:root {
+  /* surfaces */
+  --ui-bg: #e7e7ec;
+  --ui-bg-beam: rgba(255, 255, 255, .55);
+  --ui-face-top: #f3f3f5;
+  --ui-face-bottom: #eaeaed;
+  --ui-face-flat: #efeff2;
+  --ui-line: #d9d9e0;
+
+  /* text */
+  --ui-ink: #3b3e46;          /* default text on buttons */
+  --ui-ink-strong: #07080a;   /* hover / pressed */
+  --ui-ink-muted: #5e626c;    /* secondary text, 5.4:1 on --ui-bg */
+  --ui-ink-disabled: #9a9ea8;
+
+  /* warm glow */
+  --ui-glow: 255, 146, 72;
+  --ui-glow-soft: 255, 190, 150;
+  --ui-glow-white: 255, 252, 245;
+
+  /* neutral cast shadow (falls down-left) */
+  --ui-cast: 150, 148, 166;
+
+  /* shape */
+  --ui-radius-pill: 999px;
+  --ui-radius-lg: 22px;
+  --ui-radius-md: 14px;
+
+  /* focus ring (keyboard) */
+  --ui-focus: #2b2d34;
+
+  /* motion */
+  --ui-ease: cubic-bezier(.3, .7, .3, 1);
+  --ui-t: .22s;
+  --ui-t-press: .08s;
+
+  --ui-font: "Manrope", "Segoe UI", -apple-system, Roboto, Arial, sans-serif;   /* load Manrope 400–700 from Google Fonts */
+}
+:root[data-theme="dark"] {
+  --ui-bg: #17181c;
+  --ui-bg-beam: rgba(255, 255, 255, .04);
+  --ui-face-top: #2a2c33;
+  --ui-face-bottom: #24262c;
+  --ui-face-flat: #24262c;
+  --ui-line: #34363e;
+  --ui-ink: #d9dbe0;
+  --ui-ink-strong: #ffffff;
+  --ui-ink-muted: #a7abb4;
+  --ui-ink-disabled: #6a6e78;
+  --ui-glow-white: 255, 236, 215;
+  --ui-cast: 0, 0, 0;
+  --ui-focus: #f1f2f4;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ui-bg: #17181c; --ui-bg-beam: rgba(255, 255, 255, .04);
+    --ui-face-top: #2a2c33; --ui-face-bottom: #24262c; --ui-face-flat: #24262c; --ui-line: #34363e;
+    --ui-ink: #d9dbe0; --ui-ink-strong: #ffffff; --ui-ink-muted: #a7abb4; --ui-ink-disabled: #6a6e78;
+    --ui-glow-white: 255, 236, 215; --ui-cast: 0, 0, 0; --ui-focus: #f1f2f4;
+  }
+}
+
+/* ---------- Button: shared anatomy ----------
+ * <button class="ui-btn ui-btn--primary"><span class="ui-btn__face">Label</span></button>
+ * The button itself carries the halo (::before) and the cast shadow (::after);
+ * the face carries the surface, rims and text — so glow never covers the label.
+ */
+.ui-btn {
+  --h: 52px; --px: 28px; --fs: 16px;
+  position: relative; isolation: isolate;
+  display: inline-flex; align-items: stretch;
+  height: var(--h); padding: 0; margin: 0; border: 0; background: none;
+  font: 600 var(--fs)/1 var(--ui-font); letter-spacing: -0.005em;
+  color: var(--ui-ink); cursor: pointer;
+  border-radius: var(--ui-radius-pill);
+  -webkit-tap-highlight-color: transparent;
+}
+.ui-btn--sm { --h: 40px; --px: 20px; --fs: 14px; }
+.ui-btn__face {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 0 var(--px); white-space: nowrap;
+  border-radius: inherit;
+  transition: transform var(--ui-t) var(--ui-ease), box-shadow var(--ui-t) var(--ui-ease),
+              background var(--ui-t) var(--ui-ease), color var(--ui-t) var(--ui-ease);
+}
+.ui-btn__face svg { width: 1.15em; height: 1.15em; flex: none; }
+.ui-btn::before, .ui-btn::after {
+  content: ""; position: absolute; border-radius: inherit; pointer-events: none;
+  transition: transform var(--ui-t) var(--ui-ease), opacity var(--ui-t) var(--ui-ease), filter var(--ui-t) var(--ui-ease);
+}
+.ui-btn:focus-visible, .ui-btn.is-focus { outline: none; }
+.ui-btn:focus-visible .ui-btn__face, .ui-btn.is-focus .ui-btn__face {
+  outline: 2px solid var(--ui-focus); outline-offset: 4px;
+}
+.ui-btn:disabled, .ui-btn.is-disabled { cursor: not-allowed; }
+.ui-btn:disabled::before, .ui-btn:disabled::after, .ui-btn.is-disabled::before, .ui-btn.is-disabled::after { opacity: 0; }
+
+/* ---------- PRIMARY — Glow Strong (only one per screen) ---------- */
+.ui-btn--primary::before {           /* warm halo */
+  inset: -120% -22% -55%; border-radius: 50%; z-index: -1;
+  background:
+    radial-gradient(ellipse 44% 12% at 50% 64%, rgba(var(--ui-glow-white), .85), rgba(var(--ui-glow-white), .3) 55%, transparent 100%),
+    radial-gradient(closest-side at 50% 60%, rgba(255, 168, 115, .62), rgba(var(--ui-glow-soft), .36) 45%, rgba(var(--ui-glow-soft), .1) 75%, transparent 100%);
+  filter: blur(10px);
+}
+.ui-btn--primary::after {            /* cast shadow, warm near the edge */
+  inset: 0; z-index: -1;
+  transform: translate(-8%, 34%);
+  background: linear-gradient(180deg, rgba(var(--ui-glow), .7) 0%, rgba(235, 150, 120, .55) 20%, rgba(var(--ui-cast), .42) 50%, rgba(var(--ui-cast), .3) 100%);
+  filter: blur(5px);
+}
+.ui-btn--primary .ui-btn__face {
+  background: linear-gradient(180deg, var(--ui-face-top), var(--ui-face-bottom));
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, .9),
+    inset 0 -2px 3px rgba(var(--ui-glow), .25),
+    0 0 0 1px rgba(var(--ui-glow-white), .35),
+    0 2px 0 0 rgba(var(--ui-glow), .9),
+    0 4px 10px 0 rgba(var(--ui-glow), .6),
+    0 0 14px 2px rgba(var(--ui-glow), .38),
+    0 0 34px 8px rgba(var(--ui-glow-soft), .36);
+}
+.ui-btn--primary .ui-btn__face::before {   /* soft white light along the straight top edge */
+  content: ""; position: absolute; left: 16%; right: 16%; top: -9px; height: 12px; border-radius: 50%;
+  background: linear-gradient(90deg, transparent, rgba(var(--ui-glow-white), .9) 25%, rgba(var(--ui-glow-white), .9) 75%, transparent);
+  filter: blur(5px); opacity: .45; pointer-events: none; transition: opacity var(--ui-t) var(--ui-ease);
+}
+/* hover: stronger orange + white glow, stronger text */
+.ui-btn--primary:hover::before, .ui-btn--primary.is-hover::before { transform: scale(1.05); filter: blur(10px) saturate(1.25); }
+.ui-btn--primary:hover .ui-btn__face, .ui-btn--primary.is-hover .ui-btn__face {
+  color: var(--ui-ink-strong);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, .95),
+    inset 0 -2px 3px rgba(var(--ui-glow), .32),
+    0 0 0 1px rgba(var(--ui-glow-white), .6),
+    0 0 7px 1px rgba(var(--ui-glow-white), .45),
+    0 2px 0 0 rgba(var(--ui-glow), 1),
+    0 5px 13px 0 rgba(var(--ui-glow), .78),
+    0 0 20px 3px rgba(var(--ui-glow), .5),
+    0 0 46px 11px rgba(var(--ui-glow-soft), .48);
+}
+.ui-btn--primary:hover .ui-btn__face::before, .ui-btn--primary.is-hover .ui-btn__face::before { opacity: .85; }
+/* pressed: sinks toward the surface, shadow gets shorter */
+.ui-btn--primary:active .ui-btn__face, .ui-btn--primary.is-pressed .ui-btn__face {
+  color: var(--ui-ink-strong);
+  transform: translate(-1px, 3px) scale(.985);
+  transition-duration: var(--ui-t-press);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, .8),
+    inset 0 3px 7px rgba(120, 110, 120, .14),
+    inset 0 -2px 3px rgba(var(--ui-glow), .3),
+    0 0 0 1px rgba(var(--ui-glow-white), .35),
+    0 1.5px 0 0 rgba(var(--ui-glow), .95),
+    0 3px 8px 0 rgba(var(--ui-glow), .65),
+    0 0 12px 2px rgba(var(--ui-glow), .42),
+    0 0 30px 7px rgba(var(--ui-glow-soft), .4);
+}
+.ui-btn--primary:active::after, .ui-btn--primary.is-pressed::after { transform: translate(-3.5%, 14%); transition-duration: var(--ui-t-press); }
+.ui-btn--primary:active .ui-btn__face::before, .ui-btn--primary.is-pressed .ui-btn__face::before { opacity: .5; }
+/* disabled */
+.ui-btn--primary:disabled .ui-btn__face, .ui-btn--primary.is-disabled .ui-btn__face {
+  color: var(--ui-ink-disabled); background: var(--ui-face-flat); box-shadow: inset 0 0 0 1px var(--ui-line); transform: none;
+}
+.ui-btn--primary:disabled .ui-btn__face::before, .ui-btn--primary.is-disabled .ui-btn__face::before { opacity: 0; }
+
+/* ---------- SECONDARY — raised, no glow (Glow Hint rim on hover) ---------- */
+.ui-btn--secondary::after {
+  inset: 0; z-index: -1; transform: translate(-6%, 22%);
+  background: rgba(var(--ui-cast), .32); filter: blur(6px);
+}
+.ui-btn--secondary .ui-btn__face {
+  background: linear-gradient(180deg, var(--ui-face-top), var(--ui-face-bottom));
+  box-shadow: inset 0 2px 1px rgba(255, 255, 255, .9), inset 0 -2px 3px rgba(0, 0, 0, .04), 0 0 0 1px rgba(255, 255, 255, .5);
+}
+.ui-btn--secondary:hover .ui-btn__face, .ui-btn--secondary.is-hover .ui-btn__face {
+  color: var(--ui-ink-strong);
+  box-shadow: inset 0 2px 1px rgba(255, 255, 255, .95), inset 0 -2px 3px rgba(0, 0, 0, .04),
+              0 0 0 1px rgba(var(--ui-glow), .38), 0 0 10px 0 rgba(var(--ui-glow), .16);   /* Glow Hint */
+}
+.ui-btn--secondary:active .ui-btn__face, .ui-btn--secondary.is-pressed .ui-btn__face {
+  color: var(--ui-ink-strong); transform: translate(-1px, 2px) scale(.985); transition-duration: var(--ui-t-press);
+  box-shadow: inset 0 2px 6px rgba(120, 110, 120, .16), inset 0 -1px 2px rgba(255, 255, 255, .6), 0 0 0 1px rgba(var(--ui-glow), .3);
+}
+.ui-btn--secondary:active::after, .ui-btn--secondary.is-pressed::after { transform: translate(-2.5%, 9%); transition-duration: var(--ui-t-press); }
+.ui-btn--secondary:disabled .ui-btn__face, .ui-btn--secondary.is-disabled .ui-btn__face {
+  color: var(--ui-ink-disabled); background: var(--ui-face-flat); box-shadow: inset 0 0 0 1px var(--ui-line); transform: none;
+}
+
+/* ---------- GHOST — text only, subtle surface on hover ---------- */
+.ui-btn--ghost .ui-btn__face { background: transparent; }
+.ui-btn--ghost:hover .ui-btn__face, .ui-btn--ghost.is-hover .ui-btn__face {
+  color: var(--ui-ink-strong); background: rgba(255, 255, 255, .55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7);
+}
+:root[data-theme="dark"] .ui-btn--ghost:hover .ui-btn__face, :root[data-theme="dark"] .ui-btn--ghost.is-hover .ui-btn__face { background: rgba(255, 255, 255, .06); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.ui-btn--ghost:active .ui-btn__face, .ui-btn--ghost.is-pressed .ui-btn__face {
+  color: var(--ui-ink-strong); background: rgba(var(--ui-cast), .14); transform: scale(.985); transition-duration: var(--ui-t-press);
+}
+.ui-btn--ghost:disabled .ui-btn__face, .ui-btn--ghost.is-disabled .ui-btn__face { color: var(--ui-ink-disabled); background: transparent; box-shadow: none; transform: none; }
+
+/* ---------- ICON BUTTON — round; secondary or ghost look ---------- */
+.ui-btn--icon { --h: 48px; width: var(--h); }
+.ui-btn--icon.ui-btn--sm { --h: 36px; }
+.ui-btn--icon .ui-btn__face { padding: 0; }
+.ui-btn--icon .ui-btn__face svg { width: 20px; height: 20px; }
+.ui-btn--icon.ui-btn--sm .ui-btn__face svg { width: 16px; height: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-btn__face, .ui-btn::before, .ui-btn::after, .ui-btn--primary .ui-btn__face::before { transition: none; }
+}
+
+/* ---------- Glow levels (for surfaces other than the primary button) ---------- */
+.ui-glow-soft {   /* selected answer, active field, focus */
+  box-shadow: 0 0 0 1.5px rgba(var(--ui-glow), .75), 0 4px 18px rgba(var(--ui-glow), .28), 0 0 10px rgba(var(--ui-glow), .2);
+}
+.ui-glow-hint {   /* gradient rim only — rare secondary accents */
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--ui-face-top), var(--ui-face-bottom)) padding-box,
+    linear-gradient(120deg, rgba(var(--ui-glow), 1), rgba(var(--ui-glow-soft), .55) 40%, rgba(var(--ui-glow-soft), .3) 65%, rgba(var(--ui-glow), .85)) border-box;
+  border-width: 2px;
+}
+
+/* =====================================================================
+   CHOICE components — option, multi option, yes/no, scale key, image card
+   Selected = Glow Soft + filled mark. Raised surfaces cast a small shadow down-left.
+   ===================================================================== */
+:root {
+  --ui-yes: #18834e; --ui-no: #c4352e;           /* icon colours (≥3:1 on light faces) */
+  --ui-mark: #EA8213; --ui-mark-ink: #ffffff;   /* selected mark (checkbox / radio) */
+  --ui-raised: -3px 5px 12px rgba(var(--ui-cast), .26), inset 0 2px 1px rgba(255, 255, 255, .9), inset 0 -2px 3px rgba(0, 0, 0, .03);
+  --ui-raised-hover: -4px 7px 16px rgba(var(--ui-cast), .30), inset 0 2px 1px rgba(255, 255, 255, .95), inset 0 -2px 3px rgba(0, 0, 0, .03);
+  --ui-raised-pressed: -1px 2px 5px rgba(var(--ui-cast), .22), inset 0 2px 6px rgba(120, 110, 120, .14);
+  --ui-soft-ring: 0 0 0 1.5px rgba(var(--ui-glow), .8), 0 4px 18px rgba(var(--ui-glow), .26), 0 0 10px rgba(var(--ui-glow), .2);
+}
+:root[data-theme="dark"] { --ui-yes: #4fd394; --ui-no: #ff7b73; --ui-mark: #EA8213; --ui-mark-ink: #ffffff;
+  --ui-raised: -3px 5px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+  --ui-raised-hover: -4px 7px 16px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+  --ui-raised-pressed: -1px 2px 5px rgba(0,0,0,.4), inset 0 2px 6px rgba(0,0,0,.35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ui-yes: #4fd394; --ui-no: #ff7b73; --ui-mark: #EA8213; --ui-mark-ink: #ffffff;
+  --ui-raised: -3px 5px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+  --ui-raised-hover: -4px 7px 16px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+  --ui-raised-pressed: -1px 2px 5px rgba(0,0,0,.4), inset 0 2px 6px rgba(0,0,0,.35); } }
+
+/* shared base for clickable raised surfaces */
+.ui-option, .ui-yn__btn, .ui-key, .ui-imgcard {
+  font-family: var(--ui-font); color: var(--ui-ink); cursor: pointer; border: 0; margin: 0;
+  background: linear-gradient(180deg, var(--ui-face-top), var(--ui-face-bottom));
+  box-shadow: var(--ui-raised);
+  transition: transform var(--ui-t) var(--ui-ease), box-shadow var(--ui-t) var(--ui-ease), color var(--ui-t) var(--ui-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.ui-option:focus-visible, .ui-option.is-focus, .ui-yn__btn:focus-visible, .ui-yn__btn.is-focus,
+.ui-key:focus-visible, .ui-key.is-focus, .ui-imgcard:focus-visible, .ui-imgcard.is-focus { outline: 2px solid var(--ui-focus); outline-offset: 4px; }
+@media (hover: hover) {
+  .ui-option:hover:not(:disabled), .ui-yn__btn:hover:not(:disabled), .ui-key:hover:not(:disabled), .ui-imgcard:hover:not(:disabled) { box-shadow: var(--ui-raised-hover); color: var(--ui-ink-strong); }
+}
+.ui-option.is-hover, .ui-yn__btn.is-hover, .ui-key.is-hover, .ui-imgcard.is-hover { box-shadow: var(--ui-raised-hover); color: var(--ui-ink-strong); }
+.ui-option:active:not(:disabled), .ui-option.is-pressed, .ui-yn__btn:active:not(:disabled), .ui-yn__btn.is-pressed,
+.ui-key:active:not(:disabled), .ui-key.is-pressed, .ui-imgcard:active:not(:disabled), .ui-imgcard.is-pressed {
+  box-shadow: var(--ui-raised-pressed); transform: translate(-1px, 2px); transition-duration: var(--ui-t-press);
+}
+/* selected = Glow Soft on top of the raised surface */
+.ui-option[aria-checked="true"], .ui-option.is-selected, .ui-yn__btn[aria-checked="true"], .ui-yn__btn.is-selected,
+.ui-key[aria-checked="true"], .ui-key.is-selected, .ui-imgcard[aria-checked="true"], .ui-imgcard.is-selected {
+  box-shadow: var(--ui-soft-ring), var(--ui-raised); color: var(--ui-ink-strong);
+}
+.ui-option:disabled, .ui-option.is-disabled, .ui-yn__btn:disabled, .ui-yn__btn.is-disabled,
+.ui-key:disabled, .ui-key.is-disabled, .ui-imgcard:disabled, .ui-imgcard.is-disabled {
+  cursor: not-allowed; color: var(--ui-ink-disabled); background: var(--ui-face-flat); box-shadow: inset 0 0 0 1px var(--ui-line); transform: none;
+}
+
+/* ---------- Option (single) / Multi option ---------- */
+.ui-option {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 14px 16px 14px 18px;
+  border-radius: 18px; text-align: left; font-size: 16px; font-weight: 500;
+}
+.ui-option__label { flex: 1; min-width: 0; overflow-wrap: break-word; }
+.ui-option__key {   /* keyboard hint: only on hover / keyboard focus, never on touch */
+  flex: none; width: 22px; height: 22px; border-radius: 6px; font-size: 12px; font-weight: 700; color: var(--ui-ink-muted);
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px var(--ui-line);
+  opacity: 0; width: 0; margin-right: -12px; overflow: hidden; transition: opacity var(--ui-t), width var(--ui-t), margin var(--ui-t);
+}
+@media (hover: hover) {
+  .ui-option:hover .ui-option__key, .ui-option.is-hover .ui-option__key, .ui-option:focus-visible .ui-option__key, .ui-option.is-focus .ui-option__key { opacity: 1; width: 22px; margin-right: 0; }
+}
+.ui-option__mark {
+  flex: none; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--ui-face-flat); box-shadow: inset 1px 2px 4px rgba(var(--ui-cast), .35), inset 0 0 0 1px var(--ui-line);
+  color: transparent; transition: background var(--ui-t), box-shadow var(--ui-t), color var(--ui-t);
+}
+.ui-option--multi .ui-option__mark { border-radius: 7px; }
+.ui-option__mark svg { width: 14px; height: 14px; }
+.ui-option[aria-checked="true"] .ui-option__mark, .ui-option.is-selected .ui-option__mark {
+  background: var(--ui-mark); color: var(--ui-mark-ink); box-shadow: 0 0 10px rgba(var(--ui-glow), .5);
+}
+.ui-option:disabled .ui-option__mark, .ui-option.is-disabled .ui-option__mark { box-shadow: inset 0 0 0 1px var(--ui-line); background: transparent; }
+
+/* ---------- Yes / No ---------- */
+.ui-yn { display: inline-flex; gap: 24px; }
+.ui-yn__item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ui-yn__btn {
+  width: 58px; height: 58px; border-radius: 50%; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ui-yn__btn svg { width: 22px; height: 22px; }
+.ui-yn__btn--yes { color: var(--ui-yes); }
+.ui-yn__btn--no { color: var(--ui-no); }
+@media (hover: hover) { .ui-yn__btn--yes:hover:not(:disabled) { color: var(--ui-yes); } .ui-yn__btn--no:hover:not(:disabled) { color: var(--ui-no); } }
+.ui-yn__btn--yes.is-hover, .ui-yn__btn--yes.is-selected, .ui-yn__btn--yes[aria-checked="true"] { color: var(--ui-yes); }
+.ui-yn__btn--no.is-hover, .ui-yn__btn--no.is-selected, .ui-yn__btn--no[aria-checked="true"] { color: var(--ui-no); }
+.ui-yn__label { font: 600 14px var(--ui-font); color: var(--ui-ink-muted); transition: color var(--ui-t); }
+.ui-yn__item.is-selected .ui-yn__label, .ui-yn__btn[aria-checked="true"] + .ui-yn__label { color: var(--ui-ink-strong); }
+
+/* ---------- Scale key ---------- */
+.ui-scale { display: flex; gap: 10px; flex-wrap: wrap; }
+.ui-key {
+  width: 52px; height: 52px; border-radius: 50%; padding: 0; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ui-key--sm { width: 40px; height: 40px; font-size: 14px; }
+.ui-key[aria-checked="true"], .ui-key.is-selected { color: #9a3c00; }
+:root[data-theme="dark"] .ui-key[aria-checked="true"], :root[data-theme="dark"] .ui-key.is-selected { color: #ffb27c; }
+.ui-scale__labels { display: flex; justify-content: space-between; margin-top: 10px; font: 500 13px var(--ui-font); color: var(--ui-ink-muted); }
+
+/* ---------- Image card ---------- */
+.ui-imgcard {
+  position: relative; display: flex; flex-direction: column; width: 100%; padding: 8px 8px 0; border-radius: 22px; text-align: left;
+}
+.ui-imgcard__box { aspect-ratio: 4 / 3; border-radius: 15px; overflow: hidden; background: var(--ui-face-flat); display: flex; align-items: center; justify-content: center; }
+.ui-imgcard__box img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.ui-imgcard__cap { display: flex; align-items: center; gap: 10px; padding: 12px 8px 14px 10px; font-size: 15px; font-weight: 600; }
+.ui-imgcard__cap .ui-option__label { flex: 1; }
+.ui-imgcard .ui-option__mark { width: 22px; height: 22px; }
+.ui-imgcard[aria-checked="true"] .ui-option__mark, .ui-imgcard.is-selected .ui-option__mark { background: var(--ui-mark); color: var(--ui-mark-ink); box-shadow: 0 0 10px rgba(var(--ui-glow), .5); }
+.ui-imgcard__zoom { position: absolute; top: 16px; right: 16px; }
+
+@media (prefers-reduced-motion: reduce) { .ui-option, .ui-yn__btn, .ui-key, .ui-imgcard, .ui-option__mark, .ui-option__key { transition: none; } }
+
+/* ---------- OVERLAY icon button — sits on top of images (zoom). Light, translucent, flat. ---------- */
+.ui-btn--overlay .ui-btn__face {
+  background: rgba(255, 255, 255, .62);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55);
+  color: #1d2027;
+}
+.ui-btn--overlay:hover .ui-btn__face, .ui-btn--overlay.is-hover .ui-btn__face { background: rgba(255, 255, 255, .82); color: #07080a; }
+.ui-btn--overlay:active .ui-btn__face, .ui-btn--overlay.is-pressed .ui-btn__face { background: rgba(255, 255, 255, .9); transform: scale(.94); transition-duration: var(--ui-t-press); }
+.ui-btn--overlay:disabled .ui-btn__face, .ui-btn--overlay.is-disabled .ui-btn__face { background: rgba(255, 255, 255, .4); color: var(--ui-ink-disabled); }

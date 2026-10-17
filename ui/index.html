@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuickPoll UI</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b5bfd'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/ui.css?v=1.7">
+<style>
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; font-family: var(--ui-font); color: var(--ui-ink-strong); background: var(--ui-bg); line-height: 1.5; }
+  a { color: inherit; }
+  .top {
+    position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 12px 24px;
+    background: color-mix(in srgb, var(--ui-bg) 85%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--ui-line);
+  }
+  .top h1 { font-size: 17px; margin: 0; letter-spacing: -0.01em; }
+  .top .ver { font-size: 13px; color: var(--ui-ink-muted); }
+  .top .sp { flex: 1; }
+  .seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--ui-face-flat); box-shadow: inset 0 0 0 1px var(--ui-line); }
+  .seg button { border: 0; background: none; font: 600 13px var(--ui-font); color: var(--ui-ink-muted); padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--ui-face-top); color: var(--ui-ink-strong); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+  .wrap { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; max-width: 1180px; margin: 0 auto; padding: 28px 24px 80px; }
+  nav.side { position: sticky; top: 76px; align-self: start; font-size: 14px; }
+  nav.side p { margin: 18px 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ui-ink-muted); }
+  nav.side a { display: block; padding: 5px 10px; border-radius: 8px; text-decoration: none; color: var(--ui-ink); }
+  nav.side a:hover { background: var(--ui-face-flat); }
+  @media (max-width: 820px) { .wrap { grid-template-columns: minmax(0, 1fr); } nav.side { display: none; } }
+
+  section.comp { margin-bottom: 56px; scroll-margin-top: 80px; }
+  section.comp h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.015em; }
+  section.comp > p.lead { margin: 0 0 18px; color: var(--ui-ink-muted); max-width: 680px; font-weight: 500; }
+  .rule { display: inline-block; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin-bottom: 14px;
+          background: rgba(var(--ui-glow), .14); color: #8a3a00; }
+  :root[data-theme="dark"] .rule { color: #ffb27c; }
+
+  .canvas {
+    border-radius: 24px; padding: 34px 28px; margin-bottom: 14px; overflow: hidden;
+    background:
+      linear-gradient(122deg, transparent 0 35%, var(--ui-bg-beam) 52%, transparent 72%),
+      var(--ui-bg);
+    box-shadow: inset 0 0 0 1px var(--ui-line);
+  }
+  .states { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 38px 18px; align-items: end; }
+  .state { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .state .lbl { font-size: 12px; font-weight: 600; color: var(--ui-ink-muted); letter-spacing: .02em; }
+  .row-title { font-size: 13px; font-weight: 700; color: var(--ui-ink-muted); margin: 0 0 18px; letter-spacing: .04em; text-transform: uppercase; }
+  .row-title + .states { margin-bottom: 30px; }
+  .live { display: flex; flex-wrap: wrap; gap: 22px; align-items: center; }
+
+  details.code { border-radius: 14px; box-shadow: inset 0 0 0 1px var(--ui-line); background: var(--ui-face-flat); }
+  details.code summary { cursor: pointer; padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--ui-ink-muted); list-style: none; display: flex; align-items: center; gap: 8px; }
+  details.code summary::before { content: "▸"; transition: transform .15s; }
+  details.code[open] summary::before { transform: rotate(90deg); }
+  details.code pre { margin: 0; padding: 0 14px 14px; overflow-x: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ui-ink); }
+  .copy { margin-left: auto; border: 0; background: var(--ui-face-top); box-shadow: inset 0 0 0 1px var(--ui-line); border-radius: 8px; font: 600 12px var(--ui-font); padding: 4px 10px; cursor: pointer; color: var(--ui-ink); }
+
+  .glows { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 22px; }
+  .glow-tile { display: flex; flex-direction: column; gap: 14px; }
+  .glow-demo { height: 120px; display: grid; place-items: center; }
+  .glow-card { width: 190px; height: 64px; border-radius: 18px; display: grid; place-items: center; font-weight: 600; color: var(--ui-ink);
+               box-sizing: border-box; }
+  .glow-card:not(.ui-glow-hint) { background: linear-gradient(180deg, var(--ui-face-top), var(--ui-face-bottom)); }
+  .glow-tile h3 { margin: 0; font-size: 16px; }
+  .glow-tile p { margin: 0; font-size: 14px; color: var(--ui-ink-muted); }
+  .badge-n { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: var(--ui-face-top); box-shadow: inset 0 0 0 1px var(--ui-line); margin-left: 6px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>QuickPoll UI</h1>
+  <span class="ver">components · v0.3</span>
+  <span class="sp"></span>
+  <div class="seg" role="group" aria-label="Theme">
+    <button type="button" data-theme-btn="auto" aria-pressed="true">Auto</button>
+    <button type="button" data-theme-btn="light" aria-pressed="false">Light</button>
+    <button type="button" data-theme-btn="dark" aria-pressed="false">Dark</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="Components">
+    <p>Foundations</p>
+    <a href="#type">Typography</a>
+    <a href="#glow">Glow levels</a>
+    <p>Buttons</p>
+    <a href="#primary">Primary</a>
+    <a href="#secondary">Secondary</a>
+    <a href="#ghost">Ghost</a>
+    <a href="#icon">Icon button</a>
+    <p>Choice</p>
+    <a href="#option">Option</a>
+    <a href="#multi">Multi option</a>
+    <a href="#yesno">Yes / No</a>
+    <a href="#scale">Scale</a>
+    <a href="#imgcard">Image card</a>
+  </nav>
+
+  <main id="main"></main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var ICONS = {
+    arrow: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h11M11 5.5l4.5 4.5-4.5 4.5"/></svg>',
+    back: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10H5M9 5.5L4.5 10 9 14.5"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>',
+    upload: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4M6 8l4-4 4 4M4 13v2.5A1.5 1.5 0 0 0 5.5 17h9a1.5 1.5 0 0 0 1.5-1.5V13"/></svg>',
+    zoom: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8.5 3.5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12.2 12.2L16.5 16.5M8.5 6.5v4M6.5 8.5h4"/></svg>',
+    close: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>'
+  };
+  var STATES = [['', 'Default'], ['is-hover', 'Hover'], ['is-pressed', 'Pressed'], ['is-focus', 'Focus (keyboard)'], ['is-disabled', 'Disabled']];
+
+  function btn(variant, label, opts) {
+    opts = opts || {};
+    var cls = 'ui-btn ui-btn--' + variant + (opts.icon ? ' ui-btn--icon' : '') + (opts.size === 'sm' ? ' ui-btn--sm' : '') + (opts.state ? ' ' + opts.state : '');
+    var inner = opts.icon ? ICONS[opts.icon] : ((opts.lead ? ICONS[opts.lead] : '') + label + (opts.trail ? ICONS[opts.trail] : ''));
+    var aria = opts.icon ? ' aria-label="' + label + '"' : '';
+    var dis = opts.state === 'is-disabled' ? ' disabled' : '';
+    var tab = opts.state && opts.state !== 'is-disabled' ? ' tabindex="-1"' : '';
+    return '<button type="button" class="' + cls + '"' + aria + dis + tab + '><span class="ui-btn__face">' + inner + '</span></button>';
+  }
+  function snippet(variant, label, opts) {
+    return btn(variant, label, opts).replace(/<svg[\s\S]*?<\/svg>/g, '<svg>…</svg>');
+  }
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function statesRow(variant, label, opts, title) {
+    return (title ? '<p class="row-title">' + title + '</p>' : '') + '<div class="states">' + STATES.map(function (st) {
+      var o = Object.assign({}, opts, { state: st[0] });
+      return '<div class="state">' + btn(variant, label, o) + '<span class="lbl">' + st[1] + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function code(html) {
+    return '<details class="code"><summary>HTML<button type="button" class="copy">Copy</button></summary><pre>' + esc(html) + '</pre></details>';
+  }
+
+  var CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-6.5"/></svg>';
+  var YES = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  var NO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>';
+  var MOCK = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9d2ff"/><stop offset="1" stop-color="#ffd9c2"/></linearGradient></defs><rect width="320" height="200" fill="url(#g)"/><rect x="24" y="24" width="120" height="14" rx="7" fill="#fff" opacity=".85"/><rect x="24" y="52" width="272" height="96" rx="12" fill="#fff" opacity=".6"/><rect x="24" y="160" width="80" height="18" rx="9" fill="#3b5bfd" opacity=".7"/></svg>');
+  var CSTATES = [['', 'Default'], ['is-hover', 'Hover'], ['is-pressed', 'Pressed'], ['is-selected', 'Selected'], ['is-focus', 'Focus (keyboard)'], ['is-disabled', 'Disabled']];
+  function attrs(st) {
+    return (st === 'is-disabled' ? ' disabled' : '') + (st && st !== 'is-disabled' ? ' tabindex="-1"' : '') + ' aria-checked="' + (st === 'is-selected') + '"';
+  }
+  function option(label, st, multi, key) {
+    return '<button type="button" role="' + (multi ? 'checkbox' : 'radio') + '" class="ui-option' + (multi ? ' ui-option--multi' : '') + (st ? ' ' + st : '') + '"' + attrs(st) + '>' +
+      '<span class="ui-option__key" aria-hidden="true">' + (key || 1) + '</span><span class="ui-option__label">' + label + '</span><span class="ui-option__mark" aria-hidden="true">' + CHECK + '</span></button>';
+  }
+  function yn(kind, st) {
+    var lab = kind === 'yes' ? 'Yes' : 'No';
+    return '<div class="ui-yn__item' + (st === 'is-selected' ? ' is-selected' : '') + '"><button type="button" role="radio" class="ui-yn__btn ui-yn__btn--' + kind + (st ? ' ' + st : '') + '" aria-label="' + lab + '"' + attrs(st) + '>' + (kind === 'yes' ? YES : NO) + '</button><span class="ui-yn__label" aria-hidden="true">' + lab + '</span></div>';
+  }
+  function key(n, st, sm) { return '<button type="button" role="radio" class="ui-key' + (sm ? ' ui-key--sm' : '') + (st ? ' ' + st : '') + '" aria-label="' + n + '"' + attrs(st) + '>' + n + '</button>'; }
+  function imgcard(label, st) {
+    return '<div style="position:relative;width:210px"><button type="button" role="radio" class="ui-imgcard' + (st ? ' ' + st : '') + '"' + attrs(st) + '>' +
+      '<span class="ui-imgcard__box"><img src="' + MOCK + '" alt="' + label + '"></span><span class="ui-imgcard__cap"><span class="ui-option__label">' + label + '</span><span class="ui-option__mark" aria-hidden="true">' + CHECK + '</span></span></button>' +
+      '<button type="button" class="ui-btn ui-btn--overlay ui-btn--icon ui-btn--sm ui-imgcard__zoom" aria-label="Enlarge ' + label + '"><span class="ui-btn__face">' + ICONS.zoom + '</span></button></div>';
+  }
+  function grid(items, min) { return '<div class="states" style="grid-template-columns:repeat(auto-fill,minmax(' + (min || 150) + 'px,1fr))">' + items + '</div>'; }
+  function cstates(render, min) {
+    return grid(CSTATES.map(function (st) { return '<div class="state" style="align-items:stretch">' + render(st[0]) + '<span class="lbl" style="text-align:center">' + st[1] + '</span></div>'; }).join(''), min);
+  }
+  function liveGroup(html) { return '<div class="canvas"><p class="row-title">Try it</p>' + html + '</div>'; }
+
+  var sections = [
+    {
+      id: 'type', title: 'Typography', lead: 'Manrope — airy and geometric, matches the rounded shapes. Small text uses weight 500 or more so it stays readable.',
+      html: '<div class="canvas" style="display:grid;gap:14px">' +
+        '<div style="font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.2">Which direction do you prefer?</div>' +
+        '<div style="font-size:22px;font-weight:700;letter-spacing:-.015em">Question title · 22 / Bold</div>' +
+        '<div style="font-size:16px;font-weight:500;color:var(--ui-ink)">Option and body text · 16 / Medium — Calm and minimal</div>' +
+        '<div style="font-size:15px;font-weight:500;color:var(--ui-ink-muted)">Hint · 15 / Medium — Pick the one that feels closest to your brand.</div>' +
+        '<div style="font-size:13px;font-weight:600;color:var(--ui-ink-muted);letter-spacing:.02em">Label · 13 / SemiBold — Not at all · Perfectly · 2 / 5</div>' +
+        '<div style="font-size:15px;font-weight:500;color:var(--ui-ink-muted)">0123456789 · Aa Gg Rr · Привет, это кириллица</div></div>'
+    },
+    {
+      id: 'glow', title: 'Glow levels', lead: 'One warm glow, three strengths. The strong one marks the single most important action on a screen; the others are quiet accents.',
+      html: '<div class="canvas"><div class="glows">' +
+        '<div class="glow-tile"><div class="glow-demo">' + btn('primary', 'Continue') + '</div><h3>Glow Strong<span class="badge-n">1 per screen</span></h3><p>Halo, white top light, warm cast shadow. Primary button only.</p></div>' +
+        '<div class="glow-tile"><div class="glow-demo"><div class="glow-card ui-glow-soft">Selected answer</div></div><h3>Glow Soft</h3><p>Thin warm rim and a light glow. Selected option, active field, focus.</p></div>' +
+        '<div class="glow-tile"><div class="glow-demo"><div class="glow-card ui-glow-hint">New feature</div></div><h3>Glow Hint</h3><p>Gradient rim only, no halo. Rare secondary accents.</p></div>' +
+        '</div></div>'
+    },
+    {
+      id: 'primary', title: 'Primary button', rule: 'Only one per screen',
+      lead: 'The main next step: Next, Send answers, Get link. Hover makes the glow — orange and white — a bit stronger and the label darker; pressing sinks the button and shortens its shadow.',
+      html: '<div class="canvas">' + statesRow('primary', 'Next', { trail: 'arrow' }, 'Medium') + statesRow('primary', 'Next', { size: 'sm', trail: 'arrow' }, 'Small') + '</div>' +
+        '<div class="canvas"><p class="row-title">Try it</p><div class="live">' + btn('primary', 'Send answers') + btn('primary', 'Next', { trail: 'arrow' }) + btn('primary', 'Get link', { size: 'sm' }) + '</div></div>' +
+        code(snippet('primary', 'Next', { trail: 'arrow' }))
+    },
+    {
+      id: 'secondary', title: 'Secondary button',
+      lead: 'Supporting actions next to the primary one: Previous, Skip, Copy link. Raised surface without glow; on hover it gets a faint warm rim (Glow Hint).',
+      html: '<div class="canvas">' + statesRow('secondary', 'Previous', { lead: 'back' }, 'Medium') + statesRow('secondary', 'Skip', { size: 'sm' }, 'Small') + '</div>' +
+        '<div class="canvas"><p class="row-title">Try it — with primary</p><div class="live">' + btn('secondary', 'Previous', { lead: 'back' }) + btn('primary', 'Next', { trail: 'arrow' }) + '</div></div>' +
+        code(snippet('secondary', 'Previous', { lead: 'back' }))
+    },
+    {
+      id: 'ghost', title: 'Ghost button',
+      lead: 'Quiet, low-priority actions: + Add a comment, Restart preview, Cancel. No surface until hovered.',
+      html: '<div class="canvas">' + statesRow('ghost', 'Add a comment', {}, 'Medium') + statesRow('ghost', 'Cancel', { size: 'sm' }, 'Small') + '</div>' +
+        code(snippet('ghost', 'Add a comment', {}))
+    },
+    {
+      id: 'icon', title: 'Icon button',
+      lead: 'A single icon with an accessible name: zoom, upload, close, search. Secondary and ghost looks, plus a light translucent overlay version for buttons that sit on top of pictures.',
+      html: '<div class="canvas">' + statesRow('secondary', 'Upload image', { icon: 'upload' }, 'Secondary') + statesRow('ghost', 'Close', { icon: 'close' }, 'Ghost') +
+        statesRow('secondary', 'Enlarge', { icon: 'zoom', size: 'sm' }, 'Small') + '</div>' +
+        '<div class="canvas" style="background:linear-gradient(120deg,#c9d2ff,#ffd9c2)"><p class="row-title" style="color:#3b3e46">Overlay — on top of images</p>' + statesRow('overlay', 'Enlarge', { icon: 'zoom', size: 'sm' }) + '</div>' +
+        code(snippet('secondary', 'Upload image', { icon: 'upload' }))
+    },
+    {
+      id: 'option', title: 'Option',
+      lead: 'One answer out of several. Click selects; a second click on the selected option unselects it. The number on the left (keyboard shortcut) appears only on hover — never on touch screens.',
+      html: '<div class="canvas">' + cstates(function (st) { return option('Calm and minimal', st); }, 230) + '</div>' +
+        liveGroup('<div class="live-single" style="display:grid;gap:12px;max-width:420px">' + option('Calm and minimal', '', false, 1) + option('Bold and colourful', '', false, 2) + option('Dark and premium', '', false, 3) + '</div>') +
+        code(option('Calm and minimal', '').replace(/<svg[\s\S]*?<\/svg>/g, '<svg>…</svg>'))
+    },
+    {
+      id: 'multi', title: 'Multi option',
+      lead: 'Several answers allowed. Same card, square mark instead of a round one.',
+      html: '<div class="canvas">' + cstates(function (st) { return option('Reports and export', st, true); }, 230) + '</div>' +
+        liveGroup('<div class="live-multi" style="display:grid;gap:12px;max-width:420px">' + option('Reports and export', '', true, 1) + option('Notifications', '', true, 2) + option('Mobile version', '', true, 3) + '</div>') +
+        code(option('Reports and export', '', true).replace(/<svg[\s\S]*?<\/svg>/g, '<svg>…</svg>'))
+    },
+    {
+      id: 'yesno', title: 'Yes / No',
+      lead: 'Two compact round buttons with only an icon inside — green check, red cross — and the word under the circle. The icon shape tells them apart even without colour.',
+      html: '<div class="canvas">' + grid(CSTATES.map(function (st) { return '<div class="state"><div class="ui-yn">' + yn('yes', st[0]) + yn('no', st[0] === 'is-selected' ? '' : st[0]) + '</div><span class="lbl">' + st[1] + (st[0] === 'is-selected' ? ' (Yes)' : '') + '</span></div>'; }).join(''), 200) + '</div>' +
+        liveGroup('<div class="ui-yn live-single" role="radiogroup" aria-label="Approve">' + yn('yes', '') + yn('no', '') + '</div>') +
+        code(('<div class="ui-yn" role="radiogroup">' + yn('yes', '') + yn('no', '') + '</div>').replace(/<svg[\s\S]*?<\/svg>/g, '<svg>…</svg>'))
+    },
+    {
+      id: 'scale', title: 'Scale',
+      lead: 'Rating 1–5 (or 1–10, small keys). Round keys; the selected one gets the soft glow and a warm number.',
+      html: '<div class="canvas">' + grid(CSTATES.map(function (st) { return '<div class="state">' + key(4, st[0]) + '<span class="lbl">' + st[1] + '</span></div>'; }).join(''), 120) + '</div>' +
+        liveGroup('<div style="display:inline-block"><div class="ui-scale live-single" role="radiogroup">' + [1,2,3,4,5].map(function (n) { return key(n, ''); }).join('') + '</div><div class="ui-scale__labels"><span>Not at all</span><span>Perfectly</span></div></div>' +
+          '<p class="row-title" style="margin-top:26px">1–10, small keys</p><div class="ui-scale live-single" role="radiogroup">' + [1,2,3,4,5,6,7,8,9,10].map(function (n) { return key(n, '', true); }).join('') + '</div>') +
+        code('<button type="button" role="radio" class="ui-key" aria-checked="false">4</button>')
+    },
+    {
+      id: 'imgcard', title: 'Image card',
+      lead: 'Pick a picture. The image is always shown whole; the zoom button opens the full-screen gallery.',
+      html: '<div class="canvas">' + grid(CSTATES.map(function (st) { return '<div class="state">' + imgcard('Option A', st[0]) + '<span class="lbl">' + st[1] + '</span></div>'; }).join(''), 220) + '</div>' +
+        code(imgcard('Option A', '').replace(/<svg[\s\S]*?<\/svg>/g, '<svg>…</svg>').replace(/src="data:[^"]+"/, 'src="https://…/image.png"'))
+    }
+  ];
+
+  document.getElementById('main').innerHTML = sections.map(function (s) {
+    return '<section class="comp" id="' + s.id + '"><h2>' + s.title + '</h2>' + (s.rule ? '<span class="rule">' + s.rule + '</span>' : '') +
+      '<p class="lead">' + s.lead + '</p>' + s.html + '</section>';
+  }).join('');
+
+  // live choice demos: single (radio-like, second click unselects) and multi
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.live-single [role="radio"], .live-multi [role="checkbox"]');
+    if (!b || b.disabled) return;
+    var on = b.getAttribute('aria-checked') === 'true';
+    if (b.closest('.live-single')) {
+      Array.prototype.forEach.call(b.closest('.live-single').querySelectorAll('[role="radio"]'), function (x) {
+        x.setAttribute('aria-checked', 'false'); var it = x.closest('.ui-yn__item'); if (it) it.classList.remove('is-selected');
+      });
+    }
+    b.setAttribute('aria-checked', on ? 'false' : 'true');
+    var item = b.closest('.ui-yn__item'); if (item) item.classList.toggle('is-selected', !on);
+  });
+
+  // copy buttons
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.copy');
+    if (!b) return;
+    e.preventDefault();
+    var txt = b.closest('details').querySelector('pre').textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () {
+      b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1200);
+    }, function () {});
+  });
+
+  // theme switch (remembered per browser)
+  function setTheme(t) {
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-theme-btn]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-theme-btn') === t ? 'true' : 'false'); });
+    try { localStorage.setItem('qp_ui_theme', t); } catch (e) { /* ignore */ }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-theme-btn]'), function (b) {
+    b.addEventListener('click', function () { setTheme(b.getAttribute('data-theme-btn')); });
+  });
+  var saved = 'auto'; try { saved = localStorage.getItem('qp_ui_theme') || 'auto'; } catch (e) { /* ignore */ }
+  setTheme(saved);
+})();
+</script>
+</body>
+</html>
