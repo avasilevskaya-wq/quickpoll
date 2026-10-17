@@ -245,3 +245,6 @@ textarea.field { resize: vertical; min-height: 84px; line-height: 1.45; }
 .upload-zone.is-over { border-color: var(--accent); background: var(--accent-soft); }
 .upload-alt { text-align: center; font-size: 14px; color: var(--text-2); }
 .upload-alt .linkish { color: var(--accent); font-weight: 600; }
+
+.img-foot { margin-top: 4px; }
+.layout-label { font-size: 13px; color: var(--text-3); font-weight: 600; }

@@ -511,8 +511,16 @@
         }, '✕')
       ]));
     });
-    wrap.appendChild(el('div', { class: 'row' }, [
-      el('button', { class: 'btn btn-sm', type: 'button', onclick: function () { q.o.push(''); q.i.push(''); rerenderCard(i, '.opt-input.url[data-j="' + (q.o.length - 1) + '"]'); changed(); } }, '+ Add image')
+    var layouts = [['', 'Auto', 'Picks the best layout for the images'], ['g', 'Grid', '2 per row'], ['r', 'Row', 'All in one row (wraps on small screens)'], ['f', 'Full width', 'One under another, full width — best for screenshots']];
+    wrap.appendChild(el('div', { class: 'row img-foot' }, [
+      el('button', { class: 'btn btn-sm', type: 'button', onclick: function () { q.o.push(''); q.i.push(''); rerenderCard(i, '.opt-input.url[data-j="' + (q.o.length - 1) + '"]'); changed(); } }, '+ Add image'),
+      el('span', { class: 'spacer' }),
+      el('span', { class: 'layout-label', text: 'Layout' }),
+      el('div', { class: 'seg', role: 'group', 'aria-label': 'Image layout' }, layouts.map(function (l) {
+        var on = (q.y || '') === l[0];
+        return el('button', { type: 'button', class: on ? 'is-on' : '', title: l[2], 'aria-pressed': on ? 'true' : 'false',
+          onclick: function () { if (l[0]) q.y = l[0]; else delete q.y; rerenderCard(i); changed({ goTo: i }); } }, l[1]);
+      }))
     ]));
     // upload icon (inline SVG; built here so it stays crisp in both themes)
     Array.prototype.forEach.call(wrap.querySelectorAll('.icon-btn svg'), function (sv) {
