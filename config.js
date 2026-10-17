@@ -4,5 +4,5 @@
  * and links stay shorter. You can also paste it in the builder's Settings instead.
  */
 window.QP_CONFIG = {
-  endpoint: ''
+  endpoint: 'https://script.google.com/macros/s/AKfycbxUAfEUUJ4lejdMpJ3lKXS9oS_SJqOa_84nAPGEkeV7_ZbYH0vpUg9eD7EdxVEbYk912g/exec'
 };
