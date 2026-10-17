@@ -357,3 +357,88 @@
 .ui-btn--overlay:hover .ui-btn__face, .ui-btn--overlay.is-hover .ui-btn__face { background: rgba(255, 255, 255, .82); color: #07080a; }
 .ui-btn--overlay:active .ui-btn__face, .ui-btn--overlay.is-pressed .ui-btn__face { background: rgba(255, 255, 255, .9); transform: scale(.94); transition-duration: var(--ui-t-press); }
 .ui-btn--overlay:disabled .ui-btn__face, .ui-btn--overlay.is-disabled .ui-btn__face { background: rgba(255, 255, 255, .4); color: var(--ui-ink-disabled); }
+
+/* =====================================================================
+   INPUTS — flat: light surface + thin border. Focus = Glow Soft.
+   ===================================================================== */
+:root {
+  --ui-field-bg: #f7f7f9;
+  --ui-field-border: #d3d4db;
+  --ui-field-border-hover: #b9bbc4;
+  --ui-error: #b3261e;
+}
+:root[data-theme="dark"] { --ui-field-bg: #1f2025; --ui-field-border: #3a3c45; --ui-field-border-hover: #50535e; --ui-error: #ff8a80; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ui-field-bg: #1f2025; --ui-field-border: #3a3c45; --ui-field-border-hover: #50535e; --ui-error: #ff8a80; } }
+
+.ui-field { display: grid; gap: 6px; font-family: var(--ui-font); }
+.ui-label { font-size: 13px; font-weight: 600; color: var(--ui-ink); letter-spacing: .01em; }
+.ui-help { font-size: 13px; font-weight: 500; color: var(--ui-ink-muted); }
+.ui-input, .ui-textarea {
+  width: 100%; margin: 0; font: 500 16px/1.4 var(--ui-font); color: var(--ui-ink-strong);
+  background: var(--ui-field-bg); border: 1px solid var(--ui-field-border); border-radius: 14px;
+  padding: 13px 16px; outline: none;
+  transition: border-color var(--ui-t) var(--ui-ease), box-shadow var(--ui-t) var(--ui-ease), background var(--ui-t) var(--ui-ease);
+}
+.ui-textarea { min-height: 96px; resize: vertical; field-sizing: content; }
+.ui-input::placeholder, .ui-textarea::placeholder { color: var(--ui-ink-muted); opacity: 1; font-weight: 500; }
+.ui-input:hover, .ui-textarea:hover, .ui-input.is-hover, .ui-textarea.is-hover { border-color: var(--ui-field-border-hover); }
+.ui-input:focus, .ui-textarea:focus, .ui-input.is-focus, .ui-textarea.is-focus,
+.ui-paste:focus-within, .ui-paste.is-focus {
+  border-color: rgba(var(--ui-glow), .55);   /* focus A: warm border only, no glow */
+  box-shadow: none;
+}
+.ui-field.is-error .ui-input, .ui-field.is-error .ui-textarea, .ui-field.is-error .ui-paste { border-color: var(--ui-error); box-shadow: 0 0 0 3px rgba(179, 38, 30, .10); }
+.ui-field.is-error .ui-help { color: var(--ui-error); }
+.ui-input:disabled, .ui-textarea:disabled, .ui-input.is-disabled, .ui-textarea.is-disabled, .ui-paste.is-disabled {
+  background: transparent; color: var(--ui-ink-disabled); border-color: var(--ui-line); cursor: not-allowed;
+}
+
+/* Paste field: thumbnail · "Paste image (Ctrl+V) or link" · upload icon */
+.ui-paste {
+  display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 6px;
+  background: var(--ui-field-bg); border: 1px solid var(--ui-field-border); border-radius: 14px;
+  transition: border-color var(--ui-t) var(--ui-ease), box-shadow var(--ui-t) var(--ui-ease);
+}
+.ui-paste:hover, .ui-paste.is-hover { border-color: var(--ui-field-border-hover); }
+.ui-paste__thumb { flex: none; width: 46px; height: 36px; border-radius: 9px; background: var(--ui-face-flat) center / cover no-repeat; box-shadow: inset 0 0 0 1px var(--ui-line); }
+.ui-paste__input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: 500 15px var(--ui-font); color: var(--ui-ink-strong); padding: 8px 0; }
+.ui-paste__input::placeholder { color: var(--ui-ink-muted); opacity: 1; }
+
+/* =====================================================================
+   SWITCHES — toggle and segmented control (flat). #EA8213 = on / selected.
+   ===================================================================== */
+.ui-toggle { display: inline-flex; align-items: center; gap: 10px; font: 500 15px var(--ui-font); color: var(--ui-ink); cursor: pointer; user-select: none; }
+.ui-toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.ui-toggle__track {
+  position: relative; flex: none; width: 40px; height: 24px; border-radius: 99px;
+  background: #d6d7de; transition: background var(--ui-t) var(--ui-ease);
+}
+:root[data-theme="dark"] .ui-toggle__track { background: #3a3c45; }
+.ui-toggle__track::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .22);
+  transition: transform var(--ui-t) var(--ui-ease);
+}
+.ui-toggle input:checked + .ui-toggle__track { background: linear-gradient(120deg, #ffd6b0 0%, #f5a04e 45%, var(--ui-mark) 100%); }   /* toggle 2: airy gradient ending in #EA8213 */
+.ui-toggle input:checked + .ui-toggle__track::after { transform: translateX(16px); }
+.ui-toggle:hover .ui-toggle__track, .ui-toggle.is-hover .ui-toggle__track { filter: brightness(.96); }
+.ui-toggle input:focus-visible + .ui-toggle__track, .ui-toggle.is-focus .ui-toggle__track { outline: 2px solid var(--ui-focus); outline-offset: 3px; }
+.ui-toggle.is-disabled { cursor: not-allowed; color: var(--ui-ink-disabled); }
+.ui-toggle.is-disabled .ui-toggle__track { opacity: .45; }
+
+.ui-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; font-family: var(--ui-font);
+  background: #fdfdfe; box-shadow: inset 0 0 0 1px #e6e7ec; }                      /* almost white track */
+:root[data-theme="dark"] .ui-seg { background: #1f2025; box-shadow: inset 0 0 0 1px #34363e; }
+.ui-seg__btn {
+  position: relative; border: 0; background: transparent; cursor: pointer; padding: 7px 14px; border-radius: 9px;
+  font: 600 13px var(--ui-font); color: var(--ui-ink); white-space: nowrap;      /* unselected stays readable, not "disabled" */
+  transition: background var(--ui-t) var(--ui-ease), color var(--ui-t) var(--ui-ease), box-shadow var(--ui-t) var(--ui-ease);
+}
+.ui-seg__btn:hover, .ui-seg__btn.is-hover { color: var(--ui-ink-strong); background: rgba(var(--ui-cast), .07); }
+.ui-seg__btn[aria-pressed="true"], .ui-seg__btn.is-selected {
+  color: var(--ui-ink-strong); background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(var(--ui-glow), .32), -1px 2px 6px rgba(var(--ui-cast), .26);   /* even soft warm rim + soft shadow */
+}
+:root[data-theme="dark"] .ui-seg__btn[aria-pressed="true"], :root[data-theme="dark"] .ui-seg__btn.is-selected { background: #2c2e35; box-shadow: 0 0 0 1px rgba(var(--ui-glow), .4), -1px 2px 6px rgba(0, 0, 0, .4); }
+.ui-seg__btn:focus-visible, .ui-seg__btn.is-focus { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.ui-seg__btn:disabled { color: var(--ui-ink-disabled); cursor: not-allowed; }

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../assets/ui.css?v=1.7">
+<link rel="stylesheet" href="../assets/ui.css?v=1.9">
 <style>
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
@@ -76,7 +76,7 @@
 <body>
 <header class="top">
   <h1>QuickPoll UI</h1>
-  <span class="ver">components · v0.3</span>
+  <span class="ver">components · v0.5</span>
   <span class="sp"></span>
   <div class="seg" role="group" aria-label="Theme">
     <button type="button" data-theme-btn="auto" aria-pressed="true">Auto</button>
@@ -101,6 +101,13 @@
     <a href="#yesno">Yes / No</a>
     <a href="#scale">Scale</a>
     <a href="#imgcard">Image card</a>
+    <p>Inputs</p>
+    <a href="#textfield">Text field</a>
+    <a href="#textarea">Comment (textarea)</a>
+    <a href="#paste">Image / link field</a>
+    <p>Switches</p>
+    <a href="#toggle">Toggle</a>
+    <a href="#segmented">Segmented control</a>
   </nav>
 
   <main id="main"></main>
@@ -167,6 +174,31 @@
   function grid(items, min) { return '<div class="states" style="grid-template-columns:repeat(auto-fill,minmax(' + (min || 150) + 'px,1fr))">' + items + '</div>'; }
   function cstates(render, min) {
     return grid(CSTATES.map(function (st) { return '<div class="state" style="align-items:stretch">' + render(st[0]) + '<span class="lbl" style="text-align:center">' + st[1] + '</span></div>'; }).join(''), min);
+  }
+  var FSTATES = [['', 'Default', ''], ['is-hover', 'Hover', ''], ['is-focus', 'Focus', ''], ['', 'Filled', 'Alex Morgan'], ['error', 'Error', 'alex@'], ['is-disabled', 'Disabled', '']];
+  function field(st, val, ph, help, area) {
+    var err = st === 'error';
+    var cls = (area ? 'ui-textarea' : 'ui-input') + (st && !err ? ' ' + st : '');
+    var ctl = area
+      ? '<textarea class="' + cls + '" rows="3" placeholder="' + ph + '"' + (st === 'is-disabled' ? ' disabled' : '') + ' tabindex="-1">' + val + '</textarea>'
+      : '<input class="' + cls + '" type="text" placeholder="' + ph + '" value="' + val + '"' + (st === 'is-disabled' ? ' disabled' : '') + ' tabindex="-1">';
+    return '<label class="ui-field' + (err ? ' is-error' : '') + '"><span class="ui-label">' + (area ? 'Comment' : 'Your name') + '</span>' + ctl +
+      '<span class="ui-help">' + (err ? (area ? 'Please keep it under 500 characters.' : 'Please check this field.') : help) + '</span></label>';
+  }
+  function pasteField(st, url) {
+    return '<div class="ui-field"><span class="ui-label">Image B</span><div class="ui-paste' + (st ? ' ' + st : '') + '">' +
+      '<span class="ui-paste__thumb"' + (url ? ' style="background-image:url(&quot;' + MOCK + '&quot;)"' : '') + '></span>' +
+      '<input class="ui-paste__input" type="text" placeholder="Paste image (Ctrl+V) or link" value="' + (url || '') + '"' + (st === 'is-disabled' ? ' disabled' : '') + ' tabindex="-1">' +
+      '<button type="button" class="ui-btn ui-btn--ghost ui-btn--icon ui-btn--sm" aria-label="Upload from computer"' + (st === 'is-disabled' ? ' disabled' : '') + '><span class="ui-btn__face">' + ICONS.upload + '</span></button></div></div>';
+  }
+  function toggle(st, on, label) {
+    return '<label class="ui-toggle' + (st ? ' ' + st : '') + '"><input type="checkbox"' + (on ? ' checked' : '') + (st === 'is-disabled' ? ' disabled' : '') + '><span class="ui-toggle__track" aria-hidden="true"></span>' + label + '</label>';
+  }
+  function seg(sel, st) {
+    return '<div class="ui-seg" role="group" aria-label="Layout">' + ['Auto', 'Grid', 'Row', 'Full width'].map(function (t, n) {
+      var on = n === sel;
+      return '<button type="button" class="ui-seg__btn' + (st && n === 1 ? ' ' + st : '') + '" aria-pressed="' + on + '">' + t + '</button>';
+    }).join('') + '</div>';
   }
   function liveGroup(html) { return '<div class="canvas"><p class="row-title">Try it</p>' + html + '</div>'; }
 
@@ -251,6 +283,38 @@
       lead: 'Pick a picture. The image is always shown whole; the zoom button opens the full-screen gallery.',
       html: '<div class="canvas">' + grid(CSTATES.map(function (st) { return '<div class="state">' + imgcard('Option A', st[0]) + '<span class="lbl">' + st[1] + '</span></div>'; }).join(''), 220) + '</div>' +
         code(imgcard('Option A', '').replace(/<svg[\s\S]*?<\/svg>/g, '<svg>…</svg>').replace(/src="data:[^"]+"/, 'src="https://…/image.png"'))
+    },
+    {
+      id: 'textfield', title: 'Text field',
+      lead: 'Flat: light surface and a thin border. Focus is just a warm border — no glow. Errors are calm: a red border and a short message under the field.',
+      html: '<div class="canvas">' + grid(FSTATES.map(function (st) { return '<div class="state" style="align-items:stretch">' + field(st[0], st[2], 'e.g. Alex', 'Shown to the poll owner') + '<span class="lbl" style="text-align:center">' + st[1] + '</span></div>'; }).join(''), 250) + '</div>' +
+        code('<label class="ui-field">\n  <span class="ui-label">Your name</span>\n  <input class="ui-input" type="text" placeholder="e.g. Alex">\n  <span class="ui-help">Shown to the poll owner</span>\n</label>')
+    },
+    {
+      id: 'textarea', title: 'Comment (textarea)',
+      lead: 'Same as the text field; grows with the text.',
+      html: '<div class="canvas">' + grid([['', 'Default', ''], ['is-focus', 'Focus', ''], ['', 'Filled', 'Love the spacing, but the header feels heavy.'], ['error', 'Error', '']].map(function (st) { return '<div class="state" style="align-items:stretch">' + field(st[0], st[2], 'Add a comment (optional)', 'Optional', true) + '<span class="lbl" style="text-align:center">' + st[1] + '</span></div>'; }).join(''), 250) + '</div>' +
+        code('<textarea class="ui-textarea" rows="3" placeholder="Add a comment (optional)"></textarea>')
+    },
+    {
+      id: 'paste', title: 'Image / link field',
+      lead: 'One line: thumbnail, "Paste image (Ctrl+V) or link", and a quiet upload icon that opens the drag-and-drop dialog.',
+      html: '<div class="canvas">' + grid([['', 'Empty', ''], ['is-hover', 'Hover', ''], ['is-focus', 'Focus', ''], ['', 'With image', 'https://lh3.googleusercontent.com/d/1_PH65…'], ['is-disabled', 'Uploading / disabled', '']].map(function (st) { return '<div class="state" style="align-items:stretch">' + pasteField(st[0], st[2]) + '<span class="lbl" style="text-align:center">' + st[1] + '</span></div>'; }).join(''), 300) + '</div>' +
+        code(pasteField('', '').replace(/<svg[\s\S]*?<\/svg>/g, '<svg>…</svg>'))
+    },
+    {
+      id: 'toggle', title: 'Toggle',
+      lead: 'On / off settings like Required or Allow comment. On = an airy warm gradient that ends in #EA8213, the colour of selected marks.',
+      html: '<div class="canvas">' + grid([['', false, 'Off'], ['', true, 'On'], ['is-hover', true, 'Hover'], ['is-focus', true, 'Focus (keyboard)'], ['is-disabled', false, 'Disabled off'], ['is-disabled', true, 'Disabled on']].map(function (st) { return '<div class="state">' + toggle(st[0], st[1], 'Required') + '<span class="lbl">' + st[2] + '</span></div>'; }).join(''), 160) + '</div>' +
+        '<div class="canvas"><p class="row-title">Try it</p><div class="live">' + toggle('', true, 'Required') + toggle('', false, 'Allow comment') + '</div></div>' +
+        code(toggle('', true, 'Required'))
+    },
+    {
+      id: 'segmented', title: 'Segmented control',
+      lead: 'Pick one of a few modes: layout (Auto / Grid / Row / Full width), editor (Cards / Text). Almost-white track; the selected segment is a white tab with an even, soft warm rim and a soft shadow.',
+      html: '<div class="canvas"><p class="row-title">States (hover and focus shown on “Grid”)</p>' + grid([['', 'Default'], ['is-hover', 'Hover'], ['is-focus', 'Focus (keyboard)']].map(function (st) { return '<div class="state">' + seg(0, st[0]) + '<span class="lbl">' + st[1] + '</span></div>'; }).join(''), 330) + '</div>' +
+        '<div class="canvas"><p class="row-title">Try it</p><div class="live live-seg">' + seg(0, '') + '</div></div>' +
+        code(seg(0, ''))
     }
   ];
 
@@ -271,6 +335,13 @@
     }
     b.setAttribute('aria-checked', on ? 'false' : 'true');
     var item = b.closest('.ui-yn__item'); if (item) item.classList.toggle('is-selected', !on);
+  });
+
+  // live segmented control
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.live-seg .ui-seg__btn');
+    if (!b) return;
+    Array.prototype.forEach.call(b.parentNode.children, function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
   });
 
   // copy buttons
