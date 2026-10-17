@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -9,24 +9,26 @@
 <meta property="og:description" content="Just a few taps, about a minute. No sign-up needed.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b5bfd'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="../assets/base.css?v=1.6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/base.css?v=1.7">
+<link rel="stylesheet" href="../assets/ui.css?v=2.5">
+<link rel="stylesheet" href="../assets/survey.css?v=1.0">
 <style>
   html, body { height: 100%; }
   body { display: flex; justify-content: center; overflow-x: clip; }
-  .page { width: 100%; max-width: 620px; min-height: 100%; display: flex; flex-direction: column; }
+  .page { width: 100%; max-width: 680px; min-height: 100%; display: flex; flex-direction: column; }
   .page .qp-runner { flex: 1; }
   @media (min-width: 680px) {
-    body { align-items: flex-start; padding: 40px 16px; }
+    body { align-items: flex-start; padding: 40px 24px; }
     .page { min-height: 0; }
-    .page .qp-runner { border-radius: 20px; box-shadow: var(--shadow-lg); border: 1px solid var(--line); overflow: hidden; min-height: 560px; }
-    .qp-top { padding: 18px 28px 0; }
-    .qp-screen { padding: 36px 28px 36px; }
   }
-  .state { padding: 64px 24px; text-align: center; }
-  .state h1 { font-size: 22px; margin: 0 0 8px; }
-  .state p { color: var(--text-2); margin: 0 auto 20px; max-width: 420px; }
-  .banner { margin: 0; padding: 10px 16px; font-size: 14px; background: var(--warn-soft); color: var(--warn); text-align: center; }
-  .loading { padding: 80px 24px; text-align: center; color: var(--text-3); }
+  .state { padding: 72px 24px; text-align: center; }
+  .state h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 10px; }
+  .state p { font-weight: 400; color: var(--ui-ink-muted); margin: 0 auto 26px; max-width: 420px; line-height: 1.55; }
+  .banner { margin: 12px 20px 0; padding: 10px 16px; font-size: 14px; font-weight: 500; border-radius: 14px; background: var(--ui-face-top); color: var(--ui-ink); box-shadow: 0 0 0 1px rgba(var(--ui-glow), .38); text-align: center; }
+  .loading { padding: 80px 24px; text-align: center; color: var(--ui-ink-muted); }
 </style>
 </head>
 <body>
@@ -34,8 +36,8 @@
   <div class="loading">Loading…</div>
 </main>
 <noscript><p style="padding:24px;text-align:center">Please enable JavaScript to answer this poll.</p></noscript>
-<script src="../config.js?v=1.6"></script>
-<script src="../assets/shared.js?v=1.6"></script>
+<script src="../config.js?v=1.7"></script>
+<script src="../assets/shared.js?v=1.7"></script>
 <script>
 (function () {
   'use strict';
@@ -89,6 +91,7 @@
       page.appendChild(host);
       new QP.Runner(host, survey, {
         storageKey: progressKey,
+        ui: true,
         onSubmit: function (payload) {
           // one id per attempt series, reused on retry so the sheet never gets duplicates
           var subId = QP.store.get(subKey, null);
@@ -106,7 +109,7 @@
 
     if (QP.store.get(doneKey, null)) {
       showState('You’ve already answered', 'Thanks — your answers were sent. Need to change something? You can answer again.',
-        el('button', { class: 'qp-btn qp-btn-primary', type: 'button', onclick: function () { QP.store.del(doneKey); run(); } }, 'Answer again'));
+        el('button', { class: 'ui-btn ui-btn--primary', type: 'button', onclick: function () { QP.store.del(doneKey); run(); } }, el('span', { class: 'ui-btn__face' }, 'Answer again')));
       return;
     }
     run();

@@ -1,0 +1,110 @@
+/* QuickPoll — respondent page in the design system look.
+ * Loaded after base.css and ui.css, only on s/index.html (the builder preview still uses base.css).
+ * The runner renders ui-* components when created with { ui: true }; this file handles page layout
+ * and the runner parts that have no ui-* component (review list, alerts, done screen, lightbox details).
+ */
+
+body { background: var(--ui-bg); color: var(--ui-ink-strong); font-family: var(--ui-font); -webkit-font-smoothing: antialiased; }
+:focus-visible { outline-color: var(--ui-focus); }
+
+.qp-runner { background: transparent; }
+
+/* top: poll title + progress */
+.qp-top { padding: 18px 20px 0; }
+.qp-top .ui-progress__head { gap: 12px; }
+.qp-top-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qp-count { flex: none; font-variant-numeric: tabular-nums; }
+
+.qp-screen { padding: 28px 20px 48px; }
+
+/* text */
+.qp-title { font-size: 32px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; margin: 6px 0 12px; }
+.qp-desc { font-size: 16px; font-weight: 400; line-height: 1.55; color: var(--ui-ink-muted); margin: 0 0 12px; }
+.qp-meta { font-size: 14px; font-weight: 500; color: var(--ui-ink-muted); margin: 0 0 26px; }
+.qp-label { display: block; font-size: 13px; font-weight: 600; color: var(--ui-ink); margin: 0 0 8px; }
+.qp-name { width: 100%; max-width: 360px; }
+.qp-q { font-size: 26px; font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; margin: 0 0 8px; }
+.qp-hint { font-size: 16px; font-weight: 400; line-height: 1.5; color: var(--ui-ink-muted); margin: 0 0 22px; }
+.qp-q + .qp-options, .qp-q + .qp-yesno, .qp-q + .qp-scale-wrap, .qp-q + .qp-images, .qp-q + .qp-text { margin-top: 22px; }
+
+/* required */
+.qp-req { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
+.qp-req-note { font-size: 13px; font-weight: 500; color: var(--ui-ink-muted); }
+
+/* answers */
+.qp-options { display: grid; gap: 12px; }
+.qp-yesno { margin-top: 4px; }
+.qp-scale-wrap { display: inline-block; max-width: 100%; }
+.qp-text, .qp-note { display: block; width: 100%; }
+.qp-note { margin-top: 18px; }
+.qp-add-note { margin-top: 14px; margin-left: -14px; }
+
+/* image cards in the three layouts */
+.qp-images { gap: 16px; }
+.qp-img-item { position: relative; min-width: 0; }
+.qp-img-item .ui-imgcard { width: 100%; }
+.qp-zoom-ui { position: absolute; top: 14px; right: 14px; z-index: 1; }
+.qp-lay-f .ui-imgcard__box { aspect-ratio: auto; max-height: 62vh; }
+.qp-lay-f .ui-imgcard__box img { height: auto; max-height: 62vh; }
+.qp-lay-r .ui-imgcard__cap { padding: 10px 6px 12px 8px; font-size: 14px; }
+.qp-lay-r .ui-imgcard__cap .ui-option__key { display: none; }
+.qp-img-missing { font-size: 13px; font-weight: 500; color: var(--ui-ink-muted); padding: 24px 8px; text-align: center; }
+/* keyboard hint inside image cards: only on hover / keyboard focus, like options */
+.ui-imgcard .ui-option__key {
+  flex: none; height: 22px; border-radius: 6px; font-size: 12px; font-weight: 700; color: var(--ui-ink-muted);
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px var(--ui-line);
+  opacity: 0; width: 0; margin-right: -10px; overflow: hidden; transition: opacity var(--ui-t), width var(--ui-t), margin var(--ui-t);
+}
+@media (hover: hover) {
+  .ui-imgcard:hover .ui-option__key, .ui-imgcard:focus-visible .ui-option__key { opacity: 1; width: 22px; margin-right: 0; }
+}
+
+/* bottom navigation */
+.qp-nav { border-top: 0; padding-top: 0; margin-top: 36px; }
+.qp-next, .qp-skip { min-width: 0; }
+
+/* review */
+.qp-review { gap: 12px; }
+.qp-review-item {
+  border: 0; border-radius: 18px; padding: 14px 18px; gap: 3px;
+  background: linear-gradient(180deg, var(--ui-face-top), var(--ui-face-bottom)); box-shadow: var(--ui-raised);
+  transition: box-shadow var(--ui-t) var(--ui-ease), transform var(--ui-t) var(--ui-ease);
+}
+@media (hover: hover) { .qp-review-item:hover { background: linear-gradient(180deg, var(--ui-face-top), var(--ui-face-bottom)); box-shadow: var(--ui-raised-hover); } }
+.qp-review-item:active { box-shadow: var(--ui-raised-pressed); transform: translate(-1px, 2px); }
+.qp-review-q { font-size: 13.5px; font-weight: 500; color: var(--ui-ink-muted); }
+.qp-review-a { font-size: 16px; font-weight: 600; color: var(--ui-ink-strong); }
+.qp-review-note { font-size: 14px; font-weight: 400; color: var(--ui-ink-muted); }
+.qp-review-item.is-missing { background: linear-gradient(180deg, var(--ui-face-top), var(--ui-face-bottom)); box-shadow: 0 0 0 1px rgba(var(--ui-glow), .45), var(--ui-raised); }
+.qp-review-a.is-empty { font-weight: 500; color: var(--ui-ink-muted); }
+.qp-review-item.is-missing .qp-review-a { color: #9a3c00; font-weight: 600; }
+
+/* alerts */
+.qp-alert { border-radius: 16px; padding: 14px 16px; background: var(--ui-face-top); color: var(--ui-ink-strong); font-size: 15px; font-weight: 500; box-shadow: 0 0 0 1px rgba(179, 38, 30, .28); }
+.qp-alert-warn { background: var(--ui-face-top); color: var(--ui-ink-strong); font-weight: 500; box-shadow: 0 0 0 1px rgba(var(--ui-glow), .38); margin: 0 0 16px; }
+
+/* done */
+.qp-done { padding-top: 40px; }
+.qp-done-icon {
+  width: 72px; height: 72px; margin: 0 auto 20px; border-radius: 50%; color: var(--ui-yes);
+  background: linear-gradient(180deg, var(--ui-face-top), var(--ui-face-bottom)); box-shadow: var(--ui-raised);
+}
+.qp-done-icon svg { width: 30px; height: 30px; }
+.qp-actions { margin-top: 26px; gap: 12px; }
+
+/* lightbox details */
+.qp-lb-frame { outline-width: 2px; }
+.qp-lb-frame.is-on { outline-color: rgba(var(--ui-glow), .75); box-shadow: 0 0 24px 4px rgba(var(--ui-glow), .22); }
+.qp-lb-badge { background: var(--ui-mark); color: var(--ui-mark-ink); }
+.qp-lb-badge svg { width: 18px; height: 18px; }
+.qp-lb-label { font-family: var(--ui-font); }
+
+.qp-empty { color: var(--ui-ink-muted); }
+
+@media (min-width: 680px) {
+  /* room for button glow and shadows: the runner clips horizontally (for the slide-in animation) */
+  .qp-runner { margin: 0 -56px; padding: 0 56px; }
+  .qp-top { padding: 0 8px; }
+  .qp-screen { padding: 36px 8px 48px; }
+}
+@media (hover: none) { .ui-imgcard .ui-option__key, .ui-option__key { display: none; } }

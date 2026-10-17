@@ -610,3 +610,6 @@
   .ui-imgcard[aria-checked="true"]:hover:not(:disabled):not(.just-picked) .ui-option__mark { opacity: .55; box-shadow: none; }
 }
 .ui-option__mark { transition: opacity var(--ui-t) var(--ui-ease), background var(--ui-t) var(--ui-ease), box-shadow var(--ui-t) var(--ui-ease); }
+/* just picked + still under the pointer: keep showing "selected" (glow + full mark) */
+.ui-option[aria-checked="true"].just-picked:hover, .ui-yn__btn[aria-checked="true"].just-picked:hover,
+.ui-key[aria-checked="true"].just-picked:hover, .ui-imgcard[aria-checked="true"].just-picked:hover { box-shadow: var(--ui-soft-ring), var(--ui-raised-hover); }

@@ -370,9 +370,20 @@
    * new QP.Runner(root, survey, {
    *   preview: bool,            // builder preview: no keyboard, no storage, fake submit
    *   storageKey: string,       // persist in-progress answers (live page)
-   *   onSubmit: fn(payload) -> Promise
+   *   onSubmit: fn(payload) -> Promise,
+   *   ui: bool                  // render with the design system (assets/ui.css) instead of base.css look
    * })
    */
+  var SVG = {
+    arrow: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h11M11 5.5l4.5 4.5-4.5 4.5"/></svg>',
+    back: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10H5M9 5.5L4.5 10 9 14.5"/></svg>',
+    check: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-6.5"/></svg>',
+    yes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    no: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
+    zoom: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8.5 3.5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12.2 12.2L16.5 16.5M8.5 6.5v4M6.5 8.5h4"/></svg>'
+  };
+  function icon(name) { var t = document.createElement('template'); t.innerHTML = SVG[name]; return t.content.firstChild; }
+
   function Runner(root, survey, opts) {
     this.root = root;
     this.opts = opts || {};
@@ -399,6 +410,32 @@
   QP.Runner = Runner;
 
   Runner.prototype.hasIntro = function () { return !!(this.survey.d || this.survey.n); };
+
+  /* Button in either look. kind: primary | secondary | ghost; o.lead / o.trail: 'back' | 'arrow'; o.sm; o.cls: extra classes. */
+  Runner.prototype._btn = function (kind, label, attrs, o) {
+    o = o || {}; attrs = attrs || {};
+    attrs.type = 'button';
+    if (!this.opts.ui) {
+      attrs['class'] = 'qp-btn qp-btn-' + kind + (o.sm ? ' qp-btn-sm' : '') + (o.cls ? ' ' + o.cls : '');
+      return el('button', attrs, (o.lead === 'back' ? '← ' : '') + label + (o.trail === 'arrow' ? ' →' : ''));
+    }
+    attrs['class'] = 'ui-btn ui-btn--' + kind + (o.sm ? ' ui-btn--sm' : '') + (o.cls ? ' ' + o.cls : '');
+    return el('button', attrs, el('span', { class: 'ui-btn__face' }, [o.lead ? icon(o.lead) : null, label, o.trail ? icon(o.trail) : null]));
+  };
+  /* Change a button's label in place (keeps icons). */
+  function setBtnLabel(b, label) {
+    var face = b.querySelector('.ui-btn__face') || b;
+    for (var k = 0; k < face.childNodes.length; k++) if (face.childNodes[k].nodeType === 3) { face.childNodes[k].nodeValue = label; return; }
+    face.appendChild(document.createTextNode(label));
+  }
+  /* Right after a click, show the result — not the "click again to unselect" hover — until the pointer leaves. */
+  Runner.prototype._picked = function (node, id) {
+    var self = this;
+    if (this._jp !== id) return node;
+    node.classList.add('just-picked');
+    node.addEventListener('mouseleave', function () { node.classList.remove('just-picked'); if (self._jp === id) self._jp = null; });
+    return node;
+  };
   Runner.prototype.n = function () { return this.survey.q.length; };
 
   Runner.prototype.update = function (survey) {
@@ -412,6 +449,7 @@
 
   Runner.prototype.goTo = function (i, quiet) {
     clearTimeout(this._timer);
+    this._jp = null;
     var min = this.hasIntro() ? -1 : 0;
     i = Math.max(min, Math.min(i, this.n()));
     this._dir = i >= this.idx ? 1 : -1;
@@ -545,6 +583,16 @@
     var inQ = this.idx >= 0 && this.idx < n;
     var pct = this.idx < 0 ? 0 : Math.min(100, Math.round((Math.min(this.idx, n) / Math.max(n, 1)) * 100));
     if (this.state === 'done') pct = 100;
+    if (this.opts.ui) {
+      return el('div', { class: 'qp-top' }, el('div', { class: 'ui-progress' }, [
+        el('div', { class: 'ui-progress__head' }, [
+          el('span', { class: 'qp-top-title', text: this.survey.t || 'Untitled poll' }),
+          el('span', { class: 'qp-count', text: inQ ? (this.idx + 1) + ' / ' + n : '' })
+        ]),
+        el('div', { class: 'ui-progress__track', role: 'progressbar', 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' },
+          el('div', { class: 'ui-progress__bar', style: 'width:' + pct + '%' }))
+      ]));
+    }
     return el('div', { class: 'qp-top' }, [
       el('div', { class: 'qp-top-row' }, [
         el('div', { class: 'qp-top-title', text: this.survey.t || 'Untitled poll' }),
@@ -565,15 +613,14 @@
     if (s.n) {
       kids.push(el('label', { class: 'qp-label', for: 'qp-name', text: 'Your name' }));
       kids.push(el('input', {
-        id: 'qp-name', class: 'qp-input', type: 'text', autocomplete: 'name', placeholder: 'e.g. Alex',
+        id: 'qp-name', class: this.opts.ui ? 'ui-input qp-name' : 'qp-input', type: 'text', autocomplete: 'name', placeholder: 'e.g. Alex',
         value: this.name, 'data-autofocus': true,
         oninput: function (e) { self.name = e.target.value; self._save(); }
       }));
     }
-    kids.push(el('div', { class: 'qp-actions' }, el('button', {
-      class: 'qp-btn qp-btn-primary', type: 'button', 'data-primary': true,
-      disabled: !s.q.length, onclick: function () { self.next(); }
-    }, 'Start →')));
+    kids.push(el('div', { class: 'qp-actions' }, this._btn('primary', 'Start', {
+      'data-primary': true, disabled: !s.q.length, onclick: function () { self.next(); }
+    }, { trail: 'arrow' })));
     return kids;
   };
 
@@ -584,7 +631,7 @@
     var kids = [];
     if (q.r) {
       kids.push(el('div', { class: 'qp-req' }, [
-        el('span', { class: 'qp-req-tag', text: 'Required' }),
+        el('span', { class: this.opts.ui ? 'ui-badge ui-badge--required' : 'qp-req-tag', text: 'Required' }),
         el('span', { class: 'qp-req-note', text: 'You can skip it for now — we’ll remind you before sending.' })
       ]));
     }
@@ -602,15 +649,15 @@
     if (q.c) {
       if (this.noteOpen[i] || a.note) {
         kids.push(el('textarea', {
-          class: 'qp-input qp-note', rows: '2', placeholder: 'Add a comment (optional)',
+          class: (this.opts.ui ? 'ui-textarea' : 'qp-input') + ' qp-note', rows: '2', placeholder: 'Add a comment (optional)',
           'aria-label': 'Comment',
           oninput: function (e) { self.setAnswer(i, { note: e.target.value }); }
         }, a.note || ''));
       } else {
-        kids.push(el('button', {
-          class: 'qp-link', type: 'button',
-          onclick: function () { self.noteOpen[i] = true; self.render(true); var t = self.root.querySelector('.qp-note'); if (t) t.focus(); }
-        }, '+ Add a comment'));
+        var openNote = function () { self.noteOpen[i] = true; self.render(true); var t = self.root.querySelector('.qp-note'); if (t) t.focus(); };
+        kids.push(this.opts.ui
+          ? this._btn('ghost', '+ Add a comment', { onclick: openNote }, { sm: true, cls: 'qp-add-note' })
+          : el('button', { class: 'qp-link', type: 'button', onclick: openNote }, '+ Add a comment'));
       }
     }
     kids.push(this._nav(i));
@@ -626,16 +673,15 @@
     var last = i === this.n() - 1;
     var toReview = last || this.returnToReview;
     var minIdx = this.hasIntro() ? -1 : 0;
-    var prev = el('button', {
-      class: 'qp-btn qp-btn-ghost qp-prev', type: 'button',
+    var prev = this._btn(this.opts.ui ? 'secondary' : 'ghost', 'Previous', {
       disabled: i <= minIdx ? true : null, 'aria-hidden': i <= minIdx ? 'true' : null,
       onclick: function () { self.back(); }
-    }, '← Previous');
+    }, { lead: 'back', cls: 'qp-prev' });
     var fwd = answered
-      ? el('button', { class: 'qp-btn qp-btn-primary qp-next', type: 'button', 'data-primary': true, onclick: function () { self.next(); } },
-          toReview ? (this.returnToReview ? 'Back to review →' : 'Review →') : 'Next →')
-      : el('button', { class: 'qp-btn qp-btn-secondary qp-skip', type: 'button', onclick: function () { self.next(); } },
-          toReview ? (this.returnToReview ? 'Back to review' : 'Skip to review') : 'Skip');
+      ? this._btn('primary', toReview ? (this.returnToReview ? 'Back to review' : 'Review') : 'Next',
+          { 'data-primary': true, onclick: function () { self.next(); } }, { trail: 'arrow', cls: 'qp-next' })
+      : this._btn('secondary', toReview ? (this.returnToReview ? 'Back to review' : 'Skip to review') : 'Skip',
+          { onclick: function () { self.next(); } }, { cls: 'qp-skip' });
     return el('div', { class: 'qp-nav' }, [prev, fwd]);
   };
 
@@ -655,11 +701,14 @@
     return el('div', { class: 'qp-options', role: multi ? 'group' : 'radiogroup', 'aria-labelledby': 'qp-q-' + i },
       opts.map(function (o, n) {
         var on = selected.indexOf(o.label) >= 0;
-        return el('button', {
-          class: 'qp-opt' + (on ? ' is-on' : '') + (multi ? ' is-multi' : ''),
+        var pid = 'c' + i + ':' + n;
+        var ui = self.opts.ui;
+        return self._picked(el('button', {
+          class: ui ? 'ui-option' + (multi ? ' ui-option--multi' : '') : 'qp-opt' + (on ? ' is-on' : '') + (multi ? ' is-multi' : ''),
           type: 'button', role: multi ? 'checkbox' : 'radio', 'aria-checked': on ? 'true' : 'false',
           'data-key': keyFor(n), 'data-autofocus': n === 0 ? true : null,
           onclick: function () {
+            self._jp = pid;
             if (multi) {
               var cur = Array.isArray(a.v) ? a.v.slice() : [];
               var at = cur.indexOf(o.label);
@@ -673,16 +722,35 @@
               self.render(true);
             }
           }
-        }, [
+        }, ui ? [
+          el('span', { class: 'ui-option__key', 'aria-hidden': 'true', text: keyFor(n) }),
+          el('span', { class: 'ui-option__label', text: o.label }),
+          el('span', { class: 'ui-option__mark', 'aria-hidden': 'true' }, icon('check'))
+        ] : [
           el('span', { class: 'qp-key', 'aria-hidden': 'true', text: keyFor(n) }),
           el('span', { class: 'qp-opt-label', text: o.label }),
           el('span', { class: 'qp-check', 'aria-hidden': 'true', text: on ? '✓' : '' })
-        ]);
+        ]), pid);
       }));
   };
 
   Runner.prototype._yesno = function (i, q, a) {
     var self = this;
+    if (this.opts.ui) {
+      return el('div', { class: 'ui-yn qp-yesno', role: 'radiogroup', 'aria-labelledby': 'qp-q-' + i },
+        [['Yes', 'y', 'yes'], ['No', 'n', 'no']].map(function (p, n) {
+          var on = a.v === p[0];
+          var pid = 'y' + i + ':' + n;
+          return el('div', { class: 'ui-yn__item' + (on ? ' is-selected' : '') }, [
+            self._picked(el('button', {
+              class: 'ui-yn__btn ui-yn__btn--' + p[2], type: 'button', role: 'radio', 'aria-label': p[0],
+              'aria-checked': on ? 'true' : 'false', 'data-key': p[1], 'data-autofocus': n === 0 ? true : null,
+              onclick: function () { self._jp = pid; self.setAnswer(i, { v: a.v === p[0] ? undefined : p[0] }); self.render(true); }
+            }, icon(p[2])), pid),
+            el('span', { class: 'ui-yn__label', 'aria-hidden': 'true', text: p[0] })
+          ]);
+        }));
+    }
     return el('div', { class: 'qp-yesno', role: 'radiogroup', 'aria-labelledby': 'qp-q-' + i },
       [['Yes', 'y', '✓'], ['No', 'n', '✕']].map(function (p, n) {
         var on = a.v === p[0];
@@ -701,18 +769,20 @@
     for (var v = 1; v <= max; v++) {
       (function (v) {
         var on = Number(a.v) === v;
-        btns.push(el('button', {
-          class: 'qp-scale-btn' + (on ? ' is-on' : ''), type: 'button', role: 'radio',
+        var pid = 'r' + i + ':' + v;
+        btns.push(self._picked(el('button', {
+          class: self.opts.ui ? 'ui-key' + (max === 10 ? ' ui-key--sm' : '') : 'qp-scale-btn' + (on ? ' is-on' : ''), type: 'button', role: 'radio',
           'aria-checked': on ? 'true' : 'false', 'aria-label': String(v) + ' of ' + max,
           'data-key': v === 10 ? '0' : String(v), 'data-autofocus': v === 1 ? true : null,
-          onclick: function () { self.setAnswer(i, { v: Number(a.v) === v ? undefined : v }); self.render(true); }
-        }, String(v)));
+          onclick: function () { self._jp = pid; self.setAnswer(i, { v: Number(a.v) === v ? undefined : v }); self.render(true); }
+        }, String(v)), pid));
       })(v);
     }
     var labels = q.l || ['', ''];
+    var ui = this.opts.ui;
     return el('div', { class: 'qp-scale-wrap' }, [
-      el('div', { class: 'qp-scale qp-scale-' + max, role: 'radiogroup', 'aria-labelledby': 'qp-q-' + i }, btns),
-      (labels[0] || labels[1]) ? el('div', { class: 'qp-scale-labels' }, [
+      el('div', { class: (ui ? 'ui-scale ' : '') + 'qp-scale qp-scale-' + max, role: 'radiogroup', 'aria-labelledby': 'qp-q-' + i }, btns),
+      (labels[0] || labels[1]) ? el('div', { class: ui ? 'ui-scale__labels qp-scale-labels' : 'qp-scale-labels' }, [
         el('span', { text: labels[0] || '' }), el('span', { text: labels[1] || '' })
       ]) : null
     ]);
@@ -756,7 +826,30 @@
           });
         }
       }
-      var pick = function () { self.setAnswer(i, { v: a.v === value ? undefined : value }); self.render(true); };
+      var pid = 'i' + i + ':' + n;
+      var pick = function () { self._jp = pid; self.setAnswer(i, { v: a.v === value ? undefined : value }); self.render(true); };
+      var zoom = function (e) { e.stopPropagation(); self._lightbox(i, gallery, gallery.map(function (g) { return g.url; }).indexOf(it.url)); };
+      if (self.opts.ui) {
+        wrap.appendChild(el('div', { class: 'qp-img-item' }, [
+          self._picked(el('button', {
+            class: 'ui-imgcard', type: 'button', role: 'radio',
+            'aria-checked': on ? 'true' : 'false', 'data-key': keyFor(n), 'data-autofocus': n === 0 ? true : null,
+            onclick: pick
+          }, [
+            el('span', { class: 'ui-imgcard__box' }, img || el('span', { class: 'qp-img-missing', text: 'No image' })),
+            el('span', { class: 'ui-imgcard__cap' }, [
+              el('span', { class: 'ui-option__key', 'aria-hidden': 'true', text: keyFor(n) }),
+              el('span', { class: 'ui-option__label', text: value }),
+              el('span', { class: 'ui-option__mark', 'aria-hidden': 'true' }, icon('check'))
+            ])
+          ]), pid),
+          it.url ? el('button', {
+            class: 'ui-btn ui-btn--overlay ui-btn--icon ui-btn--sm qp-zoom-ui', type: 'button', 'aria-label': 'Enlarge ' + value, title: 'Enlarge',
+            onclick: zoom
+          }, el('span', { class: 'ui-btn__face' }, icon('zoom'))) : null
+        ]));
+        return;
+      }
       var card = el('div', { class: 'qp-img-item' }, [
         el('button', {
           class: 'qp-img-opt' + (on ? ' is-on' : ''), type: 'button', role: 'radio',
@@ -772,7 +865,7 @@
         ]),
         it.url ? el('button', {
           class: 'qp-zoom', type: 'button', 'aria-label': 'Enlarge ' + value, title: 'Enlarge',
-          onclick: function (e) { e.stopPropagation(); self._lightbox(i, gallery, gallery.map(function (g) { return g.url; }).indexOf(it.url)); }
+          onclick: zoom
         }, zoomIcon()) : null
       ]);
       wrap.appendChild(card);
@@ -801,8 +894,10 @@
     var img = el('img', { alt: '', referrerpolicy: 'no-referrer' });
     var label = el('span', { class: 'qp-lb-label' });
     var count = el('div', { class: 'qp-lb-count', 'aria-live': 'polite' });
-    var choose = el('button', { class: 'qp-btn qp-btn-primary qp-lb-choose', type: 'button' });
-    var badge = el('span', { class: 'qp-lb-badge', 'aria-hidden': 'true', text: '✓' });
+    var choose = this._btn('primary', 'Choose this', {}, { cls: 'qp-lb-choose' });
+    var badge = this.opts.ui
+      ? el('span', { class: 'qp-lb-badge', 'aria-hidden': 'true' }, icon('check'))
+      : el('span', { class: 'qp-lb-badge', 'aria-hidden': 'true', text: '✓' });
     var frame = el('div', { class: 'qp-lb-frame' }, [img, badge]);
     var box;
     var show = function (n) {
@@ -812,15 +907,17 @@
       label.textContent = g.value;
       count.textContent = many ? (idx + 1) + ' / ' + gallery.length : '';
       var on = (self.answers[qi] || {}).v === g.value;
-      choose.textContent = on ? 'Unselect' : 'Choose this';
-      choose.className = 'qp-btn qp-lb-choose ' + (on ? 'qp-btn-secondary' : 'qp-btn-primary');
+      setBtnLabel(choose, on ? 'Unselect' : 'Choose this');
+      choose.className = self.opts.ui
+        ? 'ui-btn qp-lb-choose ' + (on ? 'ui-btn--secondary' : 'ui-btn--primary')
+        : 'qp-btn qp-lb-choose ' + (on ? 'qp-btn-secondary' : 'qp-btn-primary');
       frame.classList.toggle('is-on', on);
       badge.hidden = !on;
     };
     var close = function () {
       box.remove(); document.removeEventListener('keydown', onKey, true);
       self.render(true);
-      var again = self.root.querySelectorAll('.qp-zoom')[idx];
+      var again = self.root.querySelectorAll('.qp-zoom, .qp-zoom-ui')[idx];
       if (again) again.focus(); else if (prevFocus && prevFocus.focus) prevFocus.focus();
     };
     var onKey = function (e) {
@@ -871,7 +968,7 @@
   Runner.prototype._text = function (i, q, a) {
     var self = this;
     var ta = el('textarea', {
-      class: 'qp-input qp-text', rows: '3', placeholder: 'Type your answer…',
+      class: (this.opts.ui ? 'ui-textarea' : 'qp-input') + ' qp-text', rows: '3', placeholder: 'Type your answer…',
       'aria-labelledby': 'qp-q-' + i, 'data-autofocus': true,
       oninput: function (e) {
         var had = QP.isAnswered(q, self.answers[i]);
@@ -893,7 +990,7 @@
         el('span', { text: missing.length === 1
           ? 'One required question still needs an answer.'
           : missing.length + ' required questions still need an answer.' }),
-        el('button', { class: 'qp-btn qp-btn-secondary qp-btn-sm', type: 'button', onclick: function () { self.returnToReview = true; self.goTo(missing[0]); } }, 'Answer now →')
+        this._btn('secondary', 'Answer now', { onclick: function () { self.returnToReview = true; self.goTo(missing[0]); } }, { sm: true, trail: 'arrow' })
       ]));
     }
     kids.push(el('ol', { class: 'qp-review' }, s.q.map(function (q, i) {
@@ -905,7 +1002,7 @@
         onclick: function () { self.returnToReview = true; self.goTo(i); }
       }, [
         el('span', { class: 'qp-review-q', text: (i + 1) + '. ' + (q.t || 'Untitled question') }),
-        el('span', { class: 'qp-review-a', text: txt || (q.r ? 'Required — tap to answer' : 'Skipped') }),
+        el('span', { class: 'qp-review-a' + (txt ? '' : ' is-empty'), text: txt || (q.r ? 'Required — tap to answer' : 'Skipped') }),
         note ? el('span', { class: 'qp-review-note', text: '“' + note + '”' }) : null
       ]));
     })));
@@ -917,12 +1014,10 @@
     }
     var sending = this.state === 'sending';
     kids.push(el('div', { class: 'qp-nav' }, [
-      el('button', { class: 'qp-btn qp-btn-ghost qp-prev', type: 'button', onclick: function () { self.back(); } }, '← Previous'),
-      el('button', {
-        class: 'qp-btn qp-btn-primary qp-btn-send', type: 'button', 'data-primary': true,
-        disabled: sending || missing.length > 0,
-        onclick: function () { self.submit(); }
-      }, sending ? 'Sending…' : (this.state === 'error' ? 'Try again' : 'Send answers'))
+      this._btn(this.opts.ui ? 'secondary' : 'ghost', 'Previous', { onclick: function () { self.back(); } }, { lead: 'back', cls: 'qp-prev' }),
+      this._btn('primary', sending ? 'Sending…' : (this.state === 'error' ? 'Try again' : 'Send answers'), {
+        'data-primary': true, disabled: sending || missing.length > 0, onclick: function () { self.submit(); }
+      }, { cls: 'qp-btn-send' })
     ]));
     return kids;
   };
@@ -930,14 +1025,12 @@
   Runner.prototype._done = function () {
     var self = this;
     var kids = [
-      el('div', { class: 'qp-done-icon', 'aria-hidden': 'true', text: '✓' }),
+      this.opts.ui ? el('div', { class: 'qp-done-icon', 'aria-hidden': 'true' }, icon('yes')) : el('div', { class: 'qp-done-icon', 'aria-hidden': 'true', text: '✓' }),
       el('h2', { class: 'qp-q qp-center', text: 'Thank you!' }),
       el('p', { class: 'qp-hint qp-center', text: this.opts.preview ? 'This is a preview — nothing was sent.' : 'Your answers have been sent. You can close this page.' })
     ];
     if (this.opts.preview || this.opts.allowRestart) {
-      kids.push(el('div', { class: 'qp-actions qp-center' }, el('button', {
-        class: 'qp-btn qp-btn-ghost', type: 'button', onclick: function () { self.reset(); }
-      }, this.opts.preview ? 'Restart preview' : 'Answer again')));
+      kids.push(el('div', { class: 'qp-actions qp-center' }, this._btn('ghost', this.opts.preview ? 'Restart preview' : 'Answer again', { onclick: function () { self.reset(); } })));
     }
     return el('div', { class: 'qp-done' }, kids);
   };
