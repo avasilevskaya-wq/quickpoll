@@ -100,6 +100,19 @@
   </div>
 </dialog>
 
+<!-- Upload image -->
+<dialog id="dlg-upload" aria-labelledby="dlg-upload-title">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="dlg-upload-title">Upload image</h2><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+    <div class="upload-zone" id="upload-zone">
+      <div class="upload-zone-icon" aria-hidden="true">⬆</div>
+      <strong>Drag &amp; drop images here</strong>
+      <span>or paste with Ctrl+V</span>
+    </div>
+    <div class="upload-alt">or <button class="linkish" id="upload-pick" type="button">open a folder on your computer</button></div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="config.js"></script>

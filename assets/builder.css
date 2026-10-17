@@ -225,18 +225,23 @@ textarea.field { resize: vertical; min-height: 84px; line-height: 1.45; }
 @media (min-width: 961px) { .toast { bottom: 28px; } }
 
 /* image upload */
-button.opt-thumb { padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; color: var(--text-3); border-style: dashed; height: 40px; width: 48px; }
-button.opt-thumb.has-img { border-style: solid; }
-button.opt-thumb:hover, button.opt-thumb.is-over { border-color: var(--accent); color: var(--accent); }
-.thumb-plus { font-size: 18px; font-weight: 600; line-height: 1; }
-.img-row { grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1.4fr) 32px; }
-@media (max-width: 560px) { .img-row { grid-template-columns: 48px minmax(0, 1fr) 32px; } }
+.opt-thumb { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 40px; width: 48px; }
+.img-row { grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1.4fr) 32px 32px; }
+@media (max-width: 560px) {
+  .img-row { grid-template-columns: 48px minmax(0, 1fr) 32px 32px; }
+  .img-row .url { grid-column: 2 / 3; }
+  .img-row .opt-thumb { grid-row: span 2; }
+}
 .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--accent); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.img-drop {
-  margin-top: 4px; padding: 14px; border: 1.5px dashed var(--line-strong); border-radius: 10px;
-  text-align: center; font-size: 14px; color: var(--text-2); cursor: pointer; background: var(--surface);
-}
-.img-drop strong { color: var(--text); }
-.img-drop:hover, .img-drop:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
 .qcard.is-drop { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); background: var(--accent-soft); }
+.upload-zone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 180px;
+  border: 2px dashed var(--line-strong); border-radius: 14px; background: var(--surface-2); color: var(--text-2); text-align: center; padding: 20px;
+  transition: border-color .12s, background .12s;
+}
+.upload-zone strong { color: var(--text); font-size: 16px; }
+.upload-zone-icon { font-size: 26px; color: var(--accent); margin-bottom: 4px; }
+.upload-zone.is-over { border-color: var(--accent); background: var(--accent-soft); }
+.upload-alt { text-align: center; font-size: 14px; color: var(--text-2); }
+.upload-alt .linkish { color: var(--accent); font-weight: 600; }

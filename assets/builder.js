@@ -450,11 +450,19 @@
     });
   }
 
-  function pickFiles(i, row) {
-    var inp = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/gif,image/webp', multiple: true, style: 'display:none' });
-    inp.addEventListener('change', function () { addImageFiles(i, Array.prototype.slice.call(inp.files || []), row); inp.remove(); });
-    document.body.appendChild(inp);
-    inp.click();
+  /* Upload dialog: drag & drop zone + "open a folder" link. Files go into row `row` (and new rows after it). */
+  var uploadTarget = null;
+  function openUploadDialog(i, row) {
+    uploadTarget = { i: i, row: row };
+    var d = $('dlg-upload');
+    $('upload-zone').classList.remove('is-over');
+    d.showModal();
+  }
+  function uploadFromDialog(files) {
+    if (!uploadTarget || !files.length) return;
+    var t = uploadTarget;
+    $('dlg-upload').close();
+    addImageFiles(t.i, files, t.row);
   }
 
   function imagesEditor(q, i) {
@@ -462,34 +470,23 @@
     q.o.forEach(function (o, j) {
       var url = q.i[j] || '';
       var busy = !!uploading[i + ':' + j];
-      var thumb = el('button', {
-        class: 'opt-thumb' + (busy ? ' is-busy' : '') + (url ? ' has-img' : ''), type: 'button',
-        title: url ? 'Replace image' : 'Upload image', 'aria-label': (url ? 'Replace image ' : 'Upload image ') + (j + 1),
-        onclick: function () { if (!busy) pickFiles(i, j); }
-      }, busy ? el('span', { class: 'spin', 'aria-hidden': 'true' }) : (url ? null : el('span', { class: 'thumb-plus', 'aria-hidden': 'true', text: '+' })));
-      var setThumb = function (u) { var s = QP.safeUrl(u); thumb.style.backgroundImage = s ? 'url("' + s.replace(/"/g, '%22') + '")' : ''; };
+      var thumb = el('div', { class: 'opt-thumb' + (busy ? ' is-busy' : '') + (url ? ' has-img' : ''), 'aria-hidden': 'true' },
+        busy ? el('span', { class: 'spin' }) : null);
+      var setThumb = function (u) { var s = QP.safeUrl(u); thumb.style.backgroundImage = s ? 'url("' + s.replace(/"/g, '%22') + '")' : ''; thumb.classList.toggle('has-img', !!s); };
       setThumb(url);
-      thumb.addEventListener('dragover', function (e) { e.preventDefault(); thumb.classList.add('is-over'); });
-      thumb.addEventListener('dragleave', function () { thumb.classList.remove('is-over'); });
-      thumb.addEventListener('drop', function (e) {
-        var files = filesFrom(e.dataTransfer);
-        if (!files.length) return;
-        e.preventDefault(); e.stopPropagation();
-        thumb.classList.remove('is-over');
-        addImageFiles(i, files, j);
-      });
       wrap.appendChild(el('div', { class: 'img-row' }, [
         thumb,
         el('input', {
-          class: 'opt-input', type: 'text', value: o, placeholder: 'Label (e.g. ' + String.fromCharCode(65 + j) + ')', 'aria-label': 'Image ' + (j + 1) + ' label', maxlength: '200', 'data-row': String(j),
+          class: 'opt-input', type: 'text', value: o, placeholder: 'Label (e.g. ' + String.fromCharCode(65 + j) + ')', 'aria-label': 'Image ' + (j + 1) + ' label', maxlength: '200',
           oninput: function (e) { q.o[j] = e.target.value; changed(); }
         }),
         el('input', {
-          class: 'opt-input url', type: 'url', value: busy ? '' : url, placeholder: busy ? 'Uploading…' : 'Paste image or link', 'aria-label': 'Image ' + (j + 1) + ' link', 'data-j': String(j), 'data-row': String(j),
+          class: 'opt-input url', type: 'text', value: busy ? '' : url, placeholder: busy ? 'Uploading…' : 'Paste image (Ctrl+V) or link', 'aria-label': 'Image ' + (j + 1) + ': paste image or link', 'data-j': String(j), 'data-row': String(j),
           disabled: busy ? true : null,
           oninput: function (e) { q.i[j] = e.target.value.trim(); setThumb(q.i[j]); changed(); },
           onpaste: function (e) {
-            if (filesFrom(e.clipboardData).length) return; // images are handled by the card
+            var files = filesFrom(e.clipboardData);
+            if (files.length) { e.preventDefault(); e.stopPropagation(); addImageFiles(i, files, j); return; }
             var txt = (e.clipboardData || window.clipboardData).getData('text');
             var urls = txt.split(/\s+/).filter(function (u) { return QP.safeUrl(u); });
             if (urls.length < 2) return;
@@ -505,18 +502,30 @@
           }
         }),
         el('button', {
+          class: 'icon-btn', type: 'button', title: 'Upload from computer', 'aria-label': 'Upload image ' + (j + 1) + ' from computer',
+          disabled: busy ? true : null, onclick: function () { openUploadDialog(i, j); }
+        }, el('svg', null)),
+        el('button', {
           class: 'icon-btn danger', type: 'button', 'aria-label': 'Remove image ' + (j + 1), title: 'Remove', disabled: (q.o.length <= 1 || busy) ? true : null,
           onclick: function () { q.o.splice(j, 1); q.i.splice(j, 1); rerenderCard(i); changed(); }
         }, '✕')
       ]));
     });
-    wrap.appendChild(el('div', { class: 'img-drop', role: 'button', tabindex: '0',
-      onclick: function () { pickFiles(i); },
-      onkeydown: function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickFiles(i); } }
-    }, [
-      el('strong', { text: 'Paste with Ctrl+V' }),
-      el('span', { text: ' · drop images here · or click to choose files' })
+    wrap.appendChild(el('div', { class: 'row' }, [
+      el('button', { class: 'btn btn-sm', type: 'button', onclick: function () { q.o.push(''); q.i.push(''); rerenderCard(i, '.opt-input.url[data-j="' + (q.o.length - 1) + '"]'); changed(); } }, '+ Add image')
     ]));
+    // upload icon (inline SVG; built here so it stays crisp in both themes)
+    Array.prototype.forEach.call(wrap.querySelectorAll('.icon-btn svg'), function (sv) {
+      var ns = 'http://www.w3.org/2000/svg';
+      var svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('viewBox', '0 0 20 20'); svg.setAttribute('width', '18'); svg.setAttribute('height', '18'); svg.setAttribute('aria-hidden', 'true');
+      var path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', 'M10 13V4M6 8l4-4 4 4M4 13v2.5A1.5 1.5 0 0 0 5.5 17h9a1.5 1.5 0 0 0 1.5-1.5V13');
+      path.setAttribute('fill', 'none'); path.setAttribute('stroke', 'currentColor'); path.setAttribute('stroke-width', '1.7');
+      path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+      sv.replaceWith(svg);
+    });
     return wrap;
   }
 
@@ -917,6 +926,19 @@
   $('btn-check').addEventListener('click', checkEndpoint);
   $('btn-save-settings').addEventListener('click', saveSettings);
   $('btn-import').addEventListener('click', importLink);
+  (function () {
+    var zone = $('upload-zone');
+    zone.addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); zone.classList.add('is-over'); });
+    zone.addEventListener('dragleave', function () { zone.classList.remove('is-over'); });
+    zone.addEventListener('drop', function (e) { e.preventDefault(); e.stopPropagation(); zone.classList.remove('is-over'); uploadFromDialog(filesFrom(e.dataTransfer)); });
+    $('upload-pick').addEventListener('click', function () {
+      var inp = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/gif,image/webp', multiple: true, style: 'display:none' });
+      inp.addEventListener('change', function () { uploadFromDialog(Array.prototype.slice.call(inp.files || [])); inp.remove(); });
+      document.body.appendChild(inp);
+      inp.click();
+    });
+    $('dlg-upload').addEventListener('paste', function (e) { var f = filesFrom(e.clipboardData); if (f.length) { e.preventDefault(); e.stopPropagation(); uploadFromDialog(f); } });
+  })();
   $('import-link').addEventListener('keydown', function (e) { if (e.key === 'Enter') importLink(); });
   $('btn-restart').addEventListener('click', function () { runner.reset(); });
   $('sw-edit').addEventListener('click', function () { document.body.classList.remove('show-preview'); $('sw-edit').classList.add('is-on'); $('sw-preview').classList.remove('is-on'); });
