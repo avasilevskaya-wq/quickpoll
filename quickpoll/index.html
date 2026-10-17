@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QuickPoll — builder</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b5bfd'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/base.css">
+<link rel="stylesheet" href="assets/builder.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-6.5" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="hide-sm">QuickPoll</span>
+  </div>
+  <span class="saved" id="saved" aria-live="polite"></span>
+  <span class="spacer"></span>
+  <button class="btn btn-quiet" id="btn-polls" type="button">My polls</button>
+  <button class="btn btn-quiet" id="btn-new" type="button">+ New</button>
+  <button class="icon-btn" id="btn-settings" type="button" aria-label="Settings" title="Settings">⚙</button>
+  <button class="btn btn-primary" id="btn-link" type="button">Get link</button>
+</header>
+
+<div class="layout">
+  <section class="editor" aria-label="Poll editor">
+    <div class="editor-head">
+      <div class="seg" role="tablist" aria-label="Editing mode">
+        <button type="button" role="tab" id="tab-cards" class="is-on" aria-selected="true">Cards</button>
+        <button type="button" role="tab" id="tab-text" aria-selected="false">Text</button>
+      </div>
+      <span class="hint" id="editor-hint">Tip: paste a list into an option to add many at once</span>
+    </div>
+    <div id="cards-view"></div>
+    <div id="text-view" hidden></div>
+  </section>
+
+  <aside class="preview-col" aria-label="Live preview">
+    <div class="preview-sticky">
+      <div class="preview-head">
+        <span>Live preview</span>
+        <button class="btn btn-sm btn-quiet" id="btn-restart" type="button">↺ Restart</button>
+      </div>
+      <div class="phone"><div class="phone-screen"><div id="preview" class="qp-runner"></div></div></div>
+    </div>
+  </aside>
+</div>
+
+<nav class="switcher" aria-label="View">
+  <button type="button" id="sw-edit" class="is-on">Edit</button>
+  <button type="button" id="sw-preview">Preview</button>
+</nav>
+
+<!-- Get link -->
+<dialog id="dlg-link" aria-labelledby="dlg-link-title">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="dlg-link-title">Share your poll</h2><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+    <div id="link-body"></div>
+  </div>
+</dialog>
+
+<!-- Templates / new -->
+<dialog id="dlg-new" aria-labelledby="dlg-new-title">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="dlg-new-title">New poll</h2><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+    <p>Start blank or from a template — everything is editable.</p>
+    <div class="tpl-grid" id="tpl-grid"></div>
+  </div>
+</dialog>
+
+<!-- My polls -->
+<dialog id="dlg-polls" aria-labelledby="dlg-polls-title">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="dlg-polls-title">My polls</h2><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+    <p>Saved in this browser. To edit a poll on another device, paste its link below.</p>
+    <div class="poll-list" id="poll-list"></div>
+    <div>
+      <label class="field-label" for="import-link">Open a poll from its link</label>
+      <div class="row"><input class="field" id="import-link" type="url" placeholder="https://…/s/#z…"><button class="btn" id="btn-import" type="button">Open</button></div>
+      <div class="note err" id="import-err" hidden></div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Settings -->
+<dialog id="dlg-settings" aria-labelledby="dlg-settings-title">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="dlg-settings-title">Settings</h2><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+    <div>
+      <label class="field-label" for="endpoint">Google Sheet connection (Apps Script Web App URL)</label>
+      <div class="row"><input class="field" id="endpoint" type="url" placeholder="https://script.google.com/macros/s/…/exec"><button class="btn" id="btn-check" type="button">Check</button></div>
+    </div>
+    <div class="note" id="endpoint-status">Answers are sent to this address. Setup takes about 5 minutes — see SETUP.md.</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn btn-primary" id="btn-save-settings" type="button">Save</button></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="assets/shared.js"></script>
+<script src="assets/templates.js"></script>
+<script src="assets/builder.js"></script>
+</body>
+</html>

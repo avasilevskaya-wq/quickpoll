@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quick poll</title>
+<meta name="description" content="A quick poll — just tap your answers. About a minute.">
+<meta property="og:title" content="Quick poll — tap to answer">
+<meta property="og:description" content="Just a few taps, about a minute. No sign-up needed.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b5bfd'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/base.css">
+<style>
+  html, body { height: 100%; }
+  body { display: flex; justify-content: center; overflow-x: clip; }
+  .page { width: 100%; max-width: 620px; min-height: 100%; display: flex; flex-direction: column; }
+  .page .qp-runner { flex: 1; }
+  @media (min-width: 680px) {
+    body { align-items: flex-start; padding: 40px 16px; }
+    .page { min-height: 0; }
+    .page .qp-runner { border-radius: 20px; box-shadow: var(--shadow-lg); border: 1px solid var(--line); overflow: hidden; min-height: 560px; }
+    .qp-top { padding: 18px 28px 0; }
+    .qp-screen { padding: 36px 28px 36px; }
+  }
+  .state { padding: 64px 24px; text-align: center; }
+  .state h1 { font-size: 22px; margin: 0 0 8px; }
+  .state p { color: var(--text-2); margin: 0 auto 20px; max-width: 420px; }
+  .banner { margin: 0; padding: 10px 16px; font-size: 14px; background: var(--warn-soft); color: var(--warn); text-align: center; }
+  .loading { padding: 80px 24px; text-align: center; color: var(--text-3); }
+</style>
+</head>
+<body>
+<main class="page" id="page">
+  <div class="loading">Loading…</div>
+</main>
+<noscript><p style="padding:24px;text-align:center">Please enable JavaScript to answer this poll.</p></noscript>
+<script src="../config.js"></script>
+<script src="../assets/shared.js"></script>
+<script>
+(function () {
+  'use strict';
+  var el = QP.el;
+  var page = document.getElementById('page');
+  var cfg = window.QP_CONFIG || {};
+
+  function showState(title, text, button) {
+    page.textContent = '';
+    page.appendChild(el('div', { class: 'qp-runner' }, el('div', { class: 'state' }, [
+      el('h1', { text: title }), el('p', { text: text }), button || null
+    ])));
+  }
+
+  function postJSON(url, data) {
+    var body = JSON.stringify(data);
+    var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 25000) : null;
+    var clear = function () { if (timer) clearTimeout(timer); };
+    // text/plain keeps this a "simple" request (no CORS preflight), which Apps Script accepts.
+    return fetch(url, { method: 'POST', body: body, redirect: 'follow', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          var j = null; try { j = JSON.parse(t); } catch (e) { /* not JSON */ }
+          if (j && j.ok === false) throw new Error(j.error || 'Rejected');
+          if (!r.ok && !j) throw new Error('HTTP ' + r.status);
+          return j;
+        });
+      }, function (err) {
+        if (err && err.name === 'AbortError') throw new Error('Timed out');
+        // Response unreadable (CORS) or network issue: retry without reading the response.
+        // The submission id makes the retry safe — the script ignores duplicates.
+        return fetch(url, { method: 'POST', body: body, mode: 'no-cors' }).then(function () { return { ok: true, opaque: true }; });
+      })
+      .then(function (x) { clear(); return x; }, function (e) { clear(); throw e; });
+  }
+
+  function start(survey, code) {
+    var endpoint = survey.e || cfg.endpoint || '';
+    document.title = survey.t ? survey.t + ' — quick poll' : 'Quick poll';
+    var doneKey = 'qp_done_' + survey.id;
+    var progressKey = 'qp_progress_' + survey.id + '_' + code.length;
+    var subKey = 'qp_sub_' + survey.id;
+
+    function run() {
+      page.textContent = '';
+      if (!endpoint) {
+        page.appendChild(el('p', { class: 'banner', text: 'Test mode: this poll isn’t connected to a sheet yet, so answers won’t be saved.' }));
+      }
+      var host = el('div', { class: 'qp-runner' });
+      page.appendChild(host);
+      new QP.Runner(host, survey, {
+        storageKey: progressKey,
+        onSubmit: function (payload) {
+          // one id per attempt series, reused on retry so the sheet never gets duplicates
+          var subId = QP.store.get(subKey, null);
+          if (!subId) { subId = QP.uid(12); QP.store.set(subKey, subId); }
+          payload.subId = subId;
+          payload.website = ''; // honeypot (bots fill everything)
+          if (!endpoint) return new Promise(function (_, rej) { setTimeout(function () { rej(new Error('Not connected')); }, 400); });
+          return postJSON(endpoint, payload).then(function () {
+            QP.store.set(doneKey, new Date().toISOString());
+            QP.store.del(subKey);
+          });
+        }
+      });
+    }
+
+    if (QP.store.get(doneKey, null)) {
+      showState('You’ve already answered', 'Thanks — your answers were sent. Need to change something? You can answer again.',
+        el('button', { class: 'qp-btn qp-btn-primary', type: 'button', onclick: function () { QP.store.del(doneKey); run(); } }, 'Answer again'));
+      return;
+    }
+    run();
+  }
+
+  function load() {
+    var code = location.hash.replace(/^#/, '');
+    if (!code) {
+      showState('This link looks incomplete', 'Please ask the person who sent it to share the full link again.');
+      return;
+    }
+    QP.decode(code).then(function (s) {
+      if (!s.q.length) throw new Error('broken');
+      start(s, code);
+    }, function (err) {
+      if (err && err.message === 'old-browser') {
+        showState('Please update your browser', 'This poll needs a newer browser version. Try opening the link in Chrome, Safari or Edge.');
+      } else {
+        showState('This link looks broken', 'Part of the link may have been cut off. Please ask the sender to share it again.');
+      }
+    });
+  }
+
+  window.addEventListener('hashchange', function () { location.reload(); });
+  load();
+})();
+</script>
+</body>
+</html>

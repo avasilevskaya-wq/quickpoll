@@ -1,0 +1,781 @@
+/* QuickPoll — shared core.
+ * Survey schema, link encoding, text format, and the survey runner
+ * (used by the respondent page and by the builder's live preview).
+ * No dependencies. All survey content is treated as untrusted (it comes from a URL):
+ * text is always set with textContent, image URLs are restricted to http(s).
+ */
+(function (global) {
+  'use strict';
+
+  var QP = {};
+
+  /* ---------- Question types ---------- */
+  QP.TYPES = {
+    s: { label: 'Single choice', short: 'Single', icon: '◉' },
+    m: { label: 'Multiple choice', short: 'Multiple', icon: '☑' },
+    y: { label: 'Yes / No', short: 'Yes/No', icon: '⇄' },
+    r: { label: 'Scale', short: 'Scale', icon: '★' },
+    i: { label: 'Image choice', short: 'Images', icon: '▦' },
+    x: { label: 'Short text', short: 'Text', icon: '✎' }
+  };
+  QP.TYPE_ORDER = ['s', 'm', 'y', 'r', 'i', 'x'];
+
+  /* ---------- Small helpers ---------- */
+  QP.uid = function (n) {
+    var abc = 'abcdefghijkmnpqrstuvwxyz23456789';
+    var out = '';
+    var arr = new Uint8Array(n || 6);
+    (global.crypto || global.msCrypto).getRandomValues(arr);
+    for (var i = 0; i < arr.length; i++) out += abc[arr[i] % abc.length];
+    return out;
+  };
+
+  function str(v, max) {
+    if (v === undefined || v === null) return '';
+    v = String(v);
+    return v.length > max ? v.slice(0, max) : v;
+  }
+
+  QP.safeUrl = function (u) {
+    u = str(u, 2000).trim();
+    if (!u) return '';
+    try {
+      var p = new URL(u);
+      return (p.protocol === 'https:' || p.protocol === 'http:') ? p.href : '';
+    } catch (e) { return ''; }
+  };
+
+  QP.el = function (tag, attrs, children) {
+    var n = document.createElement(tag);
+    if (attrs) {
+      for (var k in attrs) {
+        if (!Object.prototype.hasOwnProperty.call(attrs, k)) continue;
+        var v = attrs[k];
+        if (v === undefined || v === null || v === false) continue;
+        if (k === 'class') n.className = v;
+        else if (k === 'text') n.textContent = v;
+        else if (k.slice(0, 2) === 'on' && typeof v === 'function') n.addEventListener(k.slice(2), v);
+        else n.setAttribute(k, v === true ? '' : v);
+      }
+    }
+    if (children) {
+      (Array.isArray(children) ? children : [children]).forEach(function (c) {
+        if (c === null || c === undefined || c === false) return;
+        n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+      });
+    }
+    return n;
+  };
+  var el = QP.el;
+
+  QP.store = {
+    get: function (k, d) {
+      try { var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; }
+    },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+    del: function (k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } }
+  };
+
+  /* ---------- Schema ----------
+   * Compact keys keep links short:
+   * { v:1, id, t:title, d:description, n:askName(0/1), e:endpoint?,
+   *   q:[{ k:type, t:text, h:hint, o:[options], i:[imageUrls], r:required(0/1),
+   *        c:allowComment(0/1), s:scaleMax(5|10), l:[lowLabel, highLabel] }] }
+   */
+  QP.newQuestion = function (k) {
+    var q = { k: k, t: '', h: '', r: 1, c: 0 };
+    if (k === 's' || k === 'm') q.o = ['', ''];
+    if (k === 'i') { q.o = ['', '']; q.i = ['', '']; }
+    if (k === 'r') { q.s = 5; q.l = ['', '']; }
+    if (k === 'x') q.r = 0;
+    return q;
+  };
+
+  QP.newSurvey = function () {
+    return { v: 1, id: QP.uid(6), t: '', d: '', n: 0, q: [] };
+  };
+
+  QP.normalize = function (raw) {
+    raw = raw || {};
+    var s = {
+      v: 1,
+      id: /^[a-z0-9]{4,16}$/.test(raw.id) ? raw.id : QP.uid(6),
+      t: str(raw.t, 200),
+      d: str(raw.d, 1000),
+      n: raw.n ? 1 : 0,
+      q: []
+    };
+    var e = QP.safeUrl(raw.e);
+    if (e) s.e = e;
+    (Array.isArray(raw.q) ? raw.q : []).slice(0, 60).forEach(function (rq) {
+      if (!rq || !QP.TYPES[rq.k]) return;
+      var q = { k: rq.k, t: str(rq.t, 500), h: str(rq.h, 500), r: rq.r ? 1 : 0, c: rq.c ? 1 : 0 };
+      if (q.k === 's' || q.k === 'm' || q.k === 'i') {
+        q.o = (Array.isArray(rq.o) ? rq.o : []).slice(0, 30).map(function (o) { return str(o, 200); });
+      }
+      if (q.k === 'i') {
+        var imgs = Array.isArray(rq.i) ? rq.i : [];
+        q.i = q.o.map(function (_, idx) { return QP.safeUrl(imgs[idx]); });
+      }
+      if (q.k === 'r') {
+        q.s = rq.s === 10 ? 10 : 5;
+        var l = Array.isArray(rq.l) ? rq.l : [];
+        q.l = [str(l[0], 60), str(l[1], 60)];
+      }
+      s.q.push(q);
+    });
+    return s;
+  };
+
+  /* Strip empty values before encoding so links stay short. */
+  QP.compact = function (s) {
+    var out = { v: 1, id: s.id, t: s.t };
+    if (s.d) out.d = s.d;
+    if (s.n) out.n = 1;
+    if (s.e) out.e = s.e;
+    out.q = s.q.map(function (q) {
+      var o = { k: q.k, t: q.t };
+      if (q.h) o.h = q.h;
+      o.r = q.r ? 1 : 0;
+      if (q.c) o.c = 1;
+      if (q.o && (q.k === 's' || q.k === 'm' || q.k === 'i')) {
+        // keep options that have a label (or an image for image questions)
+        var keep = q.o.map(function (lbl, i) { return !!(lbl.trim() || (q.k === 'i' && q.i && q.i[i])); });
+        o.o = q.o.filter(function (_, i) { return keep[i]; }).map(function (x) { return x.trim(); });
+        if (q.k === 'i') o.i = (q.i || []).filter(function (_, i) { return keep[i]; });
+      }
+      if (q.k === 'r') {
+        if (q.s === 10) o.s = 10;
+        if (q.l && (q.l[0] || q.l[1])) o.l = [q.l[0] || '', q.l[1] || ''];
+      }
+      return o;
+    });
+    return out;
+  };
+
+  /* Returns a list of human-readable problems ([] = ready to share). */
+  QP.validate = function (s) {
+    var errs = [];
+    if (!s.t.trim()) errs.push({ q: -1, msg: 'Add a poll title.' });
+    if (!s.q.length) errs.push({ q: -1, msg: 'Add at least one question.' });
+    s.q.forEach(function (q, i) {
+      var n = 'Question ' + (i + 1);
+      if (!q.t.trim()) errs.push({ q: i, msg: n + ': write the question.' });
+      if (q.k === 's' || q.k === 'm') {
+        var filled = (q.o || []).filter(function (o) { return o.trim(); }).length;
+        if (filled < 2) errs.push({ q: i, msg: n + ': add at least 2 options.' });
+      }
+      if (q.k === 'i') {
+        var withImg = (q.i || []).filter(function (u) { return u; }).length;
+        if (withImg < 2) errs.push({ q: i, msg: n + ': add at least 2 image links.' });
+      }
+    });
+    return errs;
+  };
+
+  /* ---------- Link encoding: JSON -> deflate-raw -> base64url ---------- */
+  function b64urlFromBytes(bytes) {
+    var bin = '';
+    for (var i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function bytesFromB64url(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s);
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function streamBytes(bytes, stream) {
+    var piped = new Blob([bytes]).stream().pipeThrough(stream);
+    return new Response(piped).arrayBuffer().then(function (b) { return new Uint8Array(b); });
+  }
+
+  QP.encode = function (survey) {
+    var json = JSON.stringify(QP.compact(survey));
+    var bytes = new TextEncoder().encode(json);
+    if (typeof CompressionStream === 'function') {
+      try {
+        return streamBytes(bytes, new CompressionStream('deflate-raw'))
+          .then(function (z) { return 'z' + b64urlFromBytes(z); })
+          .catch(function () { return 'j' + b64urlFromBytes(bytes); });
+      } catch (e) { /* fall through */ }
+    }
+    return Promise.resolve('j' + b64urlFromBytes(bytes));
+  };
+
+  QP.decode = function (code) {
+    return new Promise(function (resolve, reject) {
+      code = (code || '').replace(/^#/, '').trim();
+      if (!code) return reject(new Error('empty'));
+      var kind = code[0];
+      var bytes;
+      try { bytes = bytesFromB64url(code.slice(1)); } catch (e) { return reject(new Error('broken')); }
+      var done = function (b) {
+        try { resolve(QP.normalize(JSON.parse(new TextDecoder().decode(b)))); }
+        catch (e) { reject(new Error('broken')); }
+      };
+      if (kind === 'j') return done(bytes);
+      if (kind === 'z') {
+        if (typeof DecompressionStream !== 'function') return reject(new Error('old-browser'));
+        return streamBytes(bytes, new DecompressionStream('deflate-raw')).then(done, function () { reject(new Error('broken')); });
+      }
+      reject(new Error('broken'));
+    });
+  };
+
+  /* Base URL of the site (folder containing index.html), from any page. */
+  QP.siteBase = function () {
+    var path = location.pathname.replace(/[^/]*$/, '');      // strip file name
+    if (/\/s\/$/.test(path)) path = path.replace(/s\/$/, ''); // respondent page lives in /s/
+    return location.origin + path;
+  };
+  QP.surveyLink = function (code) { return QP.siteBase() + 's/#' + code; };
+
+  /* ---------- Text format (two-way) ----------
+   *   # Poll title
+   *   > Optional description
+   *   [ask name]
+   *
+   *   Question text            (options below → single choice)
+   *   - Option A
+   *   - Option B
+   *
+   *   Question text [multi]
+   *   Question text [yes/no]
+   *   Question text [1-5: Low label | High label]    or [1-10]
+   *   Question text [images]
+   *   - Label | https://image.url
+   *   Question text [text]
+   *   Flags (comma-separated inside the brackets): optional, comment
+   *   A line starting with "  ?" or "? " under a question is a hint.
+   */
+  QP.toText = function (s) {
+    var lines = [];
+    lines.push('# ' + (s.t || ''));
+    if (s.d) s.d.split('\n').forEach(function (l) { lines.push('> ' + l); });
+    if (s.n) lines.push('[ask name]');
+    s.q.forEach(function (q) {
+      lines.push('');
+      var tags = [];
+      if (q.k === 'm') tags.push('multi');
+      if (q.k === 'y') tags.push('yes/no');
+      if (q.k === 'i') tags.push('images');
+      if (q.k === 'x') tags.push('text');
+      if (q.k === 'r') {
+        var r = '1-' + (q.s || 5);
+        if (q.l && (q.l[0] || q.l[1])) r += ': ' + (q.l[0] || '') + ' | ' + (q.l[1] || '');
+        tags.push(r);
+      }
+      var defaultReq = q.k !== 'x';
+      if (defaultReq && !q.r) tags.push('optional');
+      if (!defaultReq && q.r) tags.push('required');
+      if (q.c) tags.push('comment');
+      lines.push(q.t + (tags.length ? ' [' + tags.join(', ') + ']' : ''));
+      if (q.h) lines.push('? ' + q.h);
+      if (q.o && (q.k === 's' || q.k === 'm' || q.k === 'i')) q.o.forEach(function (o, i) {
+        if (!o && !(q.i && q.i[i])) return;
+        lines.push('- ' + o + (q.k === 'i' ? ' | ' + ((q.i || [])[i] || '') : ''));
+      });
+    });
+    return lines.join('\n') + '\n';
+  };
+
+  QP.fromText = function (text, base) {
+    var s = base ? JSON.parse(JSON.stringify(base)) : QP.newSurvey();
+    s.t = ''; s.d = ''; s.n = 0; s.q = [];
+    var desc = [];
+    var cur = null;
+    String(text || '').split(/\r?\n/).forEach(function (raw) {
+      var line = raw.trim();
+      if (!line) return;
+      if (/^#\s*/.test(line) && !s.t && !s.q.length) { s.t = line.replace(/^#\s*/, ''); return; }
+      if (/^>/.test(line) && !s.q.length) { desc.push(line.replace(/^>\s?/, '')); return; }
+      if (/^\[ask name\]$/i.test(line)) { s.n = 1; return; }
+      if (/^[-*•]\s*/.test(line) && cur) {
+        var body = line.replace(/^[-*•]\s*/, '');
+        if (cur.k === 'y' || cur.k === 'r' || cur.k === 'x') cur.k = 's';
+        if (!cur.o) cur.o = [];
+        if (cur.k === 'i') {
+          var parts = body.split('|');
+          var url = parts.length > 1 ? parts.pop().trim() : '';
+          cur.o.push(parts.join('|').trim());
+          cur.i.push(QP.safeUrl(url));
+        } else {
+          cur.o.push(body);
+        }
+        return;
+      }
+      if (/^\?\s*/.test(line) && cur && !cur.h) { cur.h = line.replace(/^\?\s*/, ''); return; }
+      // a new question
+      var m = line.match(/^(.*?)\s*\[([^\]]*)\]\s*$/);
+      var qt = m ? m[1] : line;
+      var tags = m ? m[2].split(',').map(function (t) { return t.trim().toLowerCase(); }) : [];
+      var k = 's';
+      var q = { k: 's', t: qt.replace(/^\d+[.)]\s*/, ''), h: '', r: 1, c: 0, o: [] };
+      tags.forEach(function (t) {
+        if (t === 'multi' || t === 'multiple') k = 'm';
+        else if (t === 'yes/no' || t === 'yesno' || t === 'yes-no') k = 'y';
+        else if (t === 'images' || t === 'image') k = 'i';
+        else if (t === 'text') k = 'x';
+        else if (/^1\s*-\s*(5|10)/.test(t)) {
+          k = 'r';
+          var mm = t.match(/^1\s*-\s*(5|10)\s*(?::\s*(.*))?$/);
+          q.s = mm && mm[1] === '10' ? 10 : 5;
+          var lab = (m[2].split(',').filter(function (x) { return /^\s*1\s*-/.test(x); })[0] || '').split(':')[1];
+          var lp = lab ? lab.split('|') : [];
+          q.l = [(lp[0] || '').trim(), (lp[1] || '').trim()];
+        }
+      });
+      q.k = k;
+      if (k === 'x') q.r = 0;
+      if (tags.indexOf('optional') >= 0) q.r = 0;
+      if (tags.indexOf('required') >= 0) q.r = 1;
+      if (tags.indexOf('comment') >= 0) q.c = 1;
+      if (k === 'i') q.i = [];
+      if (k !== 's' && k !== 'm' && k !== 'i') delete q.o;
+      if (k === 'r' && !q.l) { q.s = 5; q.l = ['', '']; }
+      s.q.push(q);
+      cur = q;
+    });
+    s.d = desc.join('\n');
+    return QP.normalize(s);
+  };
+
+  /* ---------- Answers ---------- */
+  QP.answerText = function (q, a) {
+    if (!a || a.v === undefined || a.v === null || a.v === '') return '';
+    if (Array.isArray(a.v)) return a.v.join('; ');
+    if (q.k === 'r') return a.v + ' / ' + (q.s || 5);
+    return String(a.v);
+  };
+  QP.isAnswered = function (q, a) {
+    if (!a) return false;
+    if (Array.isArray(a.v)) return a.v.length > 0;
+    return a.v !== undefined && a.v !== null && String(a.v).trim() !== '';
+  };
+
+  /* ---------- Runner ----------
+   * new QP.Runner(root, survey, {
+   *   preview: bool,            // builder preview: no keyboard, no storage, fake submit
+   *   storageKey: string,       // persist in-progress answers (live page)
+   *   onSubmit: fn(payload) -> Promise
+   * })
+   */
+  function Runner(root, survey, opts) {
+    this.root = root;
+    this.opts = opts || {};
+    this.survey = survey;
+    this.answers = {};
+    this.name = '';
+    this.idx = 0;            // -1 intro, 0..n-1 questions, n review, n+1 done
+    this.noteOpen = {};
+    this.startedAt = new Date().toISOString();
+    this.state = 'idle';     // idle | sending | error | done
+    this._timer = null;
+    this._dir = 1;
+    if (this.opts.storageKey) {
+      var saved = QP.store.get(this.opts.storageKey, null);
+      if (saved && saved.answers) {
+        this.answers = saved.answers; this.name = saved.name || '';
+        if (saved.startedAt) this.startedAt = saved.startedAt;
+      }
+    }
+    this.idx = this.hasIntro() ? -1 : 0;
+    if (!this.opts.preview) this._bindKeys();
+    this.render();
+  }
+  QP.Runner = Runner;
+
+  Runner.prototype.hasIntro = function () { return !!(this.survey.d || this.survey.n); };
+  Runner.prototype.n = function () { return this.survey.q.length; };
+
+  Runner.prototype.update = function (survey) {
+    this.survey = survey;
+    var max = this.n();
+    if (this.idx > max) this.idx = max;
+    if (this.idx < 0 && !this.hasIntro()) this.idx = 0;
+    if (this.state === 'done') this.state = 'idle';
+    this.render(true);
+  };
+
+  Runner.prototype.goTo = function (i, quiet) {
+    clearTimeout(this._timer);
+    var min = this.hasIntro() ? -1 : 0;
+    i = Math.max(min, Math.min(i, this.n()));
+    this._dir = i >= this.idx ? 1 : -1;
+    this.idx = i;
+    if (this.state !== 'sending') this.state = 'idle';
+    this.render(quiet);
+  };
+  Runner.prototype.next = function () { this.goTo(this.idx + 1); };
+  Runner.prototype.back = function () { this.goTo(this.idx - 1); };
+
+  Runner.prototype.reset = function () {
+    this.answers = {}; this.name = ''; this.noteOpen = {};
+    this.state = 'idle';
+    this.startedAt = new Date().toISOString();
+    this._save();
+    this.goTo(this.hasIntro() ? -1 : 0);
+  };
+
+  Runner.prototype._save = function () {
+    if (!this.opts.storageKey) return;
+    QP.store.set(this.opts.storageKey, { answers: this.answers, name: this.name, startedAt: this.startedAt });
+  };
+
+  Runner.prototype.setAnswer = function (i, patch, autoAdvance) {
+    var a = this.answers[i] || {};
+    for (var k in patch) a[k] = patch[k];
+    this.answers[i] = a;
+    this._save();
+    if (autoAdvance && !this.noteOpen[i]) {
+      var self = this;
+      clearTimeout(this._timer);
+      this._timer = setTimeout(function () { self.next(); }, 260);
+    }
+  };
+
+  Runner.prototype.payload = function () {
+    var self = this;
+    return {
+      sid: this.survey.id,
+      title: this.survey.t,
+      name: this.name.trim(),
+      startedAt: this.startedAt,
+      submittedAt: new Date().toISOString(),
+      answers: this.survey.q.map(function (q, i) {
+        var a = self.answers[i] || {};
+        return {
+          n: i + 1,
+          q: q.t,
+          type: q.k,
+          a: QP.answerText(q, a),
+          note: (a.note || '').trim()
+        };
+      })
+    };
+  };
+
+  Runner.prototype.submit = function () {
+    var self = this;
+    if (this.state === 'sending') return;
+    this.state = 'sending';
+    this.render(true);
+    var p = this.opts.onSubmit ? this.opts.onSubmit(this.payload()) : Promise.resolve();
+    Promise.resolve(p).then(function () {
+      self.state = 'done';
+      self.idx = self.n() + 1;
+      if (self.opts.storageKey) QP.store.del(self.opts.storageKey);
+      self.render();
+    }, function (err) {
+      self.state = 'error';
+      self.error = (err && err.message) || 'Network error';
+      self.render(true);
+    });
+  };
+
+  Runner.prototype._bindKeys = function () {
+    var self = this;
+    document.addEventListener('keydown', function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      var tag = (e.target && e.target.tagName) || '';
+      var typing = tag === 'INPUT' || tag === 'TEXTAREA';
+      var q = self.survey.q[self.idx];
+      if (e.key === 'Enter' && !e.shiftKey) {
+        if (typing && tag === 'TEXTAREA' && q && q.k === 'x') { /* plain Enter in long text moves on */ }
+        else if (typing && tag === 'TEXTAREA') return;
+        var btn = self.root.querySelector('[data-primary]:not([disabled])');
+        if (btn) { e.preventDefault(); btn.click(); }
+        return;
+      }
+      if (typing || !q) return;
+      var opts = self.root.querySelectorAll('[data-key]');
+      for (var i = 0; i < opts.length; i++) {
+        if (opts[i].getAttribute('data-key') === e.key.toLowerCase()) { e.preventDefault(); opts[i].click(); return; }
+      }
+    });
+  };
+
+  /* ----- Rendering ----- */
+  Runner.prototype.render = function (quiet) {
+    var root = this.root;
+    root.textContent = '';
+    var screen;
+    if (this.opts.preview && !this.n() && this.idx >= 0) {
+      root.appendChild(this._top());
+      root.appendChild(el('div', { class: 'qp-empty', text: 'Your questions will appear here.' }));
+      return;
+    }
+    if (this.idx === -1) screen = this._intro();
+    else if (this.idx < this.n()) screen = this._question(this.idx);
+    else if (this.idx === this.n() && this.state !== 'done') screen = this._review();
+    else screen = this._done();
+    var wrap = el('div', { class: 'qp-screen' + (quiet ? '' : (this._dir > 0 ? ' qp-in-next' : ' qp-in-prev')) }, screen);
+    root.appendChild(this._top());
+    root.appendChild(wrap);
+    if (!quiet && !this.opts.preview) {
+      var f = wrap.querySelector('[data-autofocus]');
+      if (f) setTimeout(function () { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }, 30);
+    }
+  };
+
+  Runner.prototype._top = function () {
+    var self = this;
+    var n = this.n();
+    var inQ = this.idx >= 0 && this.idx < n;
+    var pct = this.idx < 0 ? 0 : Math.min(100, Math.round((Math.min(this.idx, n) / Math.max(n, 1)) * 100));
+    if (this.state === 'done') pct = 100;
+    var canBack = this.state !== 'done' && this.idx > (this.hasIntro() ? -1 : 0);
+    return el('div', { class: 'qp-top' }, [
+      el('div', { class: 'qp-top-row' }, [
+        el('button', {
+          class: 'qp-back', type: 'button', 'aria-label': 'Back',
+          disabled: !canBack, onclick: function () { self.back(); }
+        }, '←'),
+        el('div', { class: 'qp-top-title', text: this.survey.t || 'Untitled poll' }),
+        el('div', { class: 'qp-count', text: inQ ? (this.idx + 1) + ' / ' + n : '' })
+      ]),
+      el('div', { class: 'qp-progress', role: 'progressbar', 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' },
+        el('div', { class: 'qp-progress-bar', style: 'width:' + pct + '%' }))
+    ]);
+  };
+
+  Runner.prototype._intro = function () {
+    var self = this;
+    var s = this.survey;
+    var kids = [el('h1', { class: 'qp-title', text: s.t || 'Untitled poll' })];
+    if (s.d) kids.push(el('p', { class: 'qp-desc', text: s.d }));
+    var meta = s.q.length + ' question' + (s.q.length === 1 ? '' : 's') + ' · about ' + Math.max(1, Math.round(s.q.length / 6)) + ' min';
+    kids.push(el('p', { class: 'qp-meta', text: meta }));
+    if (s.n) {
+      kids.push(el('label', { class: 'qp-label', for: 'qp-name', text: 'Your name' }));
+      kids.push(el('input', {
+        id: 'qp-name', class: 'qp-input', type: 'text', autocomplete: 'name', placeholder: 'e.g. Alex',
+        value: this.name, 'data-autofocus': true,
+        oninput: function (e) { self.name = e.target.value; self._save(); }
+      }));
+    }
+    kids.push(el('div', { class: 'qp-actions' }, el('button', {
+      class: 'qp-btn qp-btn-primary', type: 'button', 'data-primary': true,
+      disabled: !s.q.length, onclick: function () { self.next(); }
+    }, 'Start →')));
+    return kids;
+  };
+
+  Runner.prototype._question = function (i) {
+    var self = this;
+    var q = this.survey.q[i];
+    var a = this.answers[i] || {};
+    var kids = [];
+    kids.push(el('h2', { class: 'qp-q', id: 'qp-q-' + i, text: q.t || 'Untitled question' }));
+    var sub = q.h || ({ m: 'Select all that apply' })[q.k] || '';
+    if (sub) kids.push(el('p', { class: 'qp-hint', text: sub }));
+
+    var body;
+    var needsNext = false;
+    if (q.k === 's' || q.k === 'm') body = this._choices(i, q, a);
+    else if (q.k === 'y') body = this._yesno(i, q, a);
+    else if (q.k === 'r') body = this._scale(i, q, a);
+    else if (q.k === 'i') body = this._images(i, q, a);
+    else if (q.k === 'x') body = this._text(i, q, a);
+    kids.push(body);
+    if (q.k === 'm' || q.k === 'x' || this.noteOpen[i]) needsNext = true;
+
+    // Optional comment
+    if (q.c) {
+      if (this.noteOpen[i] || a.note) {
+        kids.push(el('textarea', {
+          class: 'qp-input qp-note', rows: '2', placeholder: 'Add a comment (optional)',
+          'aria-label': 'Comment',
+          oninput: function (e) { self.setAnswer(i, { note: e.target.value }); }
+        }, a.note || ''));
+        needsNext = true;
+      } else {
+        kids.push(el('button', {
+          class: 'qp-link', type: 'button',
+          onclick: function () { self.noteOpen[i] = true; self.render(true); var t = self.root.querySelector('.qp-note'); if (t) t.focus(); }
+        }, '+ Add a comment'));
+      }
+    }
+
+    var answered = QP.isAnswered(q, a);
+    var actions = [];
+    if (needsNext || answered) {
+      actions.push(el('button', {
+        class: 'qp-btn qp-btn-primary', type: 'button', 'data-primary': true,
+        disabled: q.r && !answered,
+        onclick: function () { self.next(); }
+      }, i === this.n() - 1 ? 'Review →' : 'Next →'));
+    }
+    if (!q.r && !answered) {
+      actions.push(el('button', { class: 'qp-btn qp-btn-ghost', type: 'button', onclick: function () { self.next(); } }, 'Skip'));
+    }
+    if (actions.length) kids.push(el('div', { class: 'qp-actions' }, actions));
+    return kids;
+  };
+
+  function keyFor(idx) { return idx < 9 ? String(idx + 1) : (idx < 35 ? String.fromCharCode(97 + idx - 9) : ''); }
+
+  Runner.prototype._choices = function (i, q, a) {
+    var self = this;
+    var multi = q.k === 'm';
+    var opts = (q.o || []).map(function (o, idx) { return { label: o.trim(), idx: idx }; }).filter(function (o) { return o.label; });
+    var selected = multi ? (Array.isArray(a.v) ? a.v : []) : [a.v];
+    return el('div', { class: 'qp-options', role: multi ? 'group' : 'radiogroup', 'aria-labelledby': 'qp-q-' + i },
+      opts.map(function (o, n) {
+        var on = selected.indexOf(o.label) >= 0;
+        return el('button', {
+          class: 'qp-opt' + (on ? ' is-on' : '') + (multi ? ' is-multi' : ''),
+          type: 'button', role: multi ? 'checkbox' : 'radio', 'aria-checked': on ? 'true' : 'false',
+          'data-key': keyFor(n), 'data-autofocus': n === 0 ? true : null,
+          onclick: function () {
+            if (multi) {
+              var cur = Array.isArray(a.v) ? a.v.slice() : [];
+              var at = cur.indexOf(o.label);
+              if (at >= 0) cur.splice(at, 1); else cur.push(o.label);
+              // keep option order
+              cur.sort(function (x, y) { return q.o.indexOf(x) - q.o.indexOf(y); });
+              self.setAnswer(i, { v: cur });
+              self.render(true);
+            } else {
+              self.setAnswer(i, { v: o.label }, true);
+              self.render(true);
+            }
+          }
+        }, [
+          el('span', { class: 'qp-key', 'aria-hidden': 'true', text: keyFor(n) }),
+          el('span', { class: 'qp-opt-label', text: o.label }),
+          el('span', { class: 'qp-check', 'aria-hidden': 'true', text: on ? '✓' : '' })
+        ]);
+      }));
+  };
+
+  Runner.prototype._yesno = function (i, q, a) {
+    var self = this;
+    return el('div', { class: 'qp-yesno', role: 'radiogroup', 'aria-labelledby': 'qp-q-' + i },
+      [['Yes', 'y', '✓'], ['No', 'n', '✕']].map(function (p, n) {
+        var on = a.v === p[0];
+        return el('button', {
+          class: 'qp-yn qp-yn-' + p[1] + (on ? ' is-on' : ''), type: 'button', role: 'radio',
+          'aria-checked': on ? 'true' : 'false', 'data-key': p[1], 'data-autofocus': n === 0 ? true : null,
+          onclick: function () { self.setAnswer(i, { v: p[0] }, true); self.render(true); }
+        }, [el('span', { class: 'qp-yn-icon', 'aria-hidden': 'true', text: p[2] }), el('span', { text: p[0] })]);
+      }));
+  };
+
+  Runner.prototype._scale = function (i, q, a) {
+    var self = this;
+    var max = q.s === 10 ? 10 : 5;
+    var btns = [];
+    for (var v = 1; v <= max; v++) {
+      (function (v) {
+        var on = Number(a.v) === v;
+        btns.push(el('button', {
+          class: 'qp-scale-btn' + (on ? ' is-on' : ''), type: 'button', role: 'radio',
+          'aria-checked': on ? 'true' : 'false', 'aria-label': String(v) + ' of ' + max,
+          'data-key': v === 10 ? '0' : String(v), 'data-autofocus': v === 1 ? true : null,
+          onclick: function () { self.setAnswer(i, { v: v }, true); self.render(true); }
+        }, String(v)));
+      })(v);
+    }
+    var labels = q.l || ['', ''];
+    return el('div', { class: 'qp-scale-wrap' }, [
+      el('div', { class: 'qp-scale qp-scale-' + max, role: 'radiogroup', 'aria-labelledby': 'qp-q-' + i }, btns),
+      (labels[0] || labels[1]) ? el('div', { class: 'qp-scale-labels' }, [
+        el('span', { text: labels[0] || '' }), el('span', { text: labels[1] || '' })
+      ]) : null
+    ]);
+  };
+
+  Runner.prototype._images = function (i, q, a) {
+    var self = this;
+    var items = (q.o || []).map(function (lbl, idx) {
+      return { label: lbl.trim(), url: (q.i || [])[idx] || '', idx: idx };
+    }).filter(function (it) { return it.url || it.label; });
+    return el('div', { class: 'qp-images' + (items.length > 4 ? ' is-many' : ''), role: 'radiogroup', 'aria-labelledby': 'qp-q-' + i },
+      items.map(function (it, n) {
+        var value = it.label || ('Option ' + String.fromCharCode(65 + n));
+        var on = a.v === value;
+        var img = it.url ? el('img', { src: it.url, alt: it.label || value, loading: 'lazy', referrerpolicy: 'no-referrer' }) : el('div', { class: 'qp-img-missing', text: 'No image' });
+        if (it.url) img.addEventListener('error', function () { img.replaceWith(el('div', { class: 'qp-img-missing', text: 'Image unavailable' })); });
+        return el('button', {
+          class: 'qp-img-opt' + (on ? ' is-on' : ''), type: 'button', role: 'radio',
+          'aria-checked': on ? 'true' : 'false', 'data-key': keyFor(n), 'data-autofocus': n === 0 ? true : null,
+          onclick: function () { self.setAnswer(i, { v: value }, true); self.render(true); }
+        }, [
+          el('div', { class: 'qp-img-box' }, img),
+          el('div', { class: 'qp-img-cap' }, [
+            el('span', { class: 'qp-key', 'aria-hidden': 'true', text: keyFor(n) }),
+            el('span', { text: value })
+          ])
+        ]);
+      }));
+  };
+
+  Runner.prototype._text = function (i, q, a) {
+    var self = this;
+    var ta = el('textarea', {
+      class: 'qp-input qp-text', rows: '3', placeholder: 'Type your answer…',
+      'aria-labelledby': 'qp-q-' + i, 'data-autofocus': true,
+      oninput: function (e) {
+        self.setAnswer(i, { v: e.target.value });
+        var b = self.root.querySelector('[data-primary]');
+        if (b) b.disabled = !!(q.r && !e.target.value.trim());
+        var skip = self.root.querySelector('.qp-btn-ghost');
+        if (skip) skip.style.display = e.target.value.trim() ? 'none' : '';
+      }
+    }, a.v || '');
+    return ta;
+  };
+
+  Runner.prototype._review = function () {
+    var self = this;
+    var s = this.survey;
+    var missing = s.q.map(function (q, i) { return q.r && !QP.isAnswered(q, self.answers[i]) ? i : -1; }).filter(function (i) { return i >= 0; });
+    var kids = [el('h2', { class: 'qp-q', text: 'Ready to send?' }),
+      el('p', { class: 'qp-hint', text: 'Tap any answer to change it.' })];
+    kids.push(el('ol', { class: 'qp-review' }, s.q.map(function (q, i) {
+      var txt = QP.answerText(q, self.answers[i]);
+      var note = (self.answers[i] && self.answers[i].note) || '';
+      return el('li', null, el('button', { class: 'qp-review-item' + (missing.indexOf(i) >= 0 ? ' is-missing' : ''), type: 'button', onclick: function () { self.goTo(i); } }, [
+        el('span', { class: 'qp-review-q', text: (i + 1) + '. ' + (q.t || 'Untitled question') }),
+        el('span', { class: 'qp-review-a', text: txt || (q.r ? 'Answer needed' : 'Skipped') }),
+        note ? el('span', { class: 'qp-review-note', text: '“' + note + '”' }) : null
+      ]));
+    })));
+    if (this.state === 'error') {
+      kids.push(el('div', { class: 'qp-alert', role: 'alert' }, [
+        el('strong', { text: 'Couldn’t send your answers. ' }),
+        el('span', { text: 'Check your connection and try again — nothing is lost.' })
+      ]));
+    }
+    var sending = this.state === 'sending';
+    kids.push(el('div', { class: 'qp-actions' }, el('button', {
+      class: 'qp-btn qp-btn-primary qp-btn-send', type: 'button', 'data-primary': true,
+      disabled: sending || missing.length > 0,
+      onclick: function () { self.submit(); }
+    }, sending ? 'Sending…' : (this.state === 'error' ? 'Try again' : 'Send answers'))));
+    return kids;
+  };
+
+  Runner.prototype._done = function () {
+    var self = this;
+    var kids = [
+      el('div', { class: 'qp-done-icon', 'aria-hidden': 'true', text: '✓' }),
+      el('h2', { class: 'qp-q qp-center', text: 'Thank you!' }),
+      el('p', { class: 'qp-hint qp-center', text: this.opts.preview ? 'This is a preview — nothing was sent.' : 'Your answers have been sent. You can close this page.' })
+    ];
+    if (this.opts.preview || this.opts.allowRestart) {
+      kids.push(el('div', { class: 'qp-actions qp-center' }, el('button', {
+        class: 'qp-btn qp-btn-ghost', type: 'button', onclick: function () { self.reset(); }
+      }, this.opts.preview ? 'Restart preview' : 'Answer again')));
+    }
+    return el('div', { class: 'qp-done' }, kids);
+  };
+
+  global.QP = QP;
+})(window);
