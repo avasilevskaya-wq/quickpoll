@@ -13,7 +13,7 @@
   QP.TYPES = {
     s: { label: 'Single choice', short: 'Single', icon: '◉' },
     m: { label: 'Multiple choice', short: 'Multiple', icon: '☑' },
-    y: { label: 'Yes / No', short: 'Yes/No', icon: '⇄' },
+    y: { label: 'Yes / No', short: 'Yes/No', icon: '✓' },
     r: { label: 'Scale', short: 'Scale', icon: '★' },
     i: { label: 'Image choice', short: 'Images', icon: '▦' },
     x: { label: 'Short text', short: 'Text', icon: '✎' }

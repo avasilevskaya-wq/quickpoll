@@ -171,12 +171,77 @@
     ]);
   }
 
+  /* ---------- Question type icons + picker (custom, so hover/selected can be styled) ---------- */
+  var TYPE_SVG = {
+    s: '<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="2.6" fill="currentColor" stroke="none"/>',
+    m: '<rect x="3.5" y="3.5" width="13" height="13" rx="3.2"/><path d="M6.8 10.2l2.3 2.3 4.3-4.6"/>',
+    y: '<path d="M4.5 10.5l3.5 3.5 7.5-8"/>',
+    r: '<path d="M10 3.2l2 4.3 4.6.5-3.4 3.1 1 4.6L10 13.4l-4.2 2.3 1-4.6L3.4 8l4.6-.5z"/>',
+    i: '<rect x="3" y="4" width="14" height="12" rx="2.6"/><circle cx="7.3" cy="8.2" r="1.4"/><path d="M3.6 14.2l4-4 3 3 2-2 3.8 3.6"/>',
+    x: '<path d="M4 14.5V16h1.5l8.6-8.6-1.5-1.5L4 14.5zM12.6 5.9l1.5 1.5 1.3-1.3a1 1 0 0 0 0-1.4l-.1-.1a1 1 0 0 0-1.4 0l-1.3 1.3z"/>'
+  };
+  var CROSS_SVG = '<path d="M6 6l8 8M14 6l-8 8"/>';
+  function svgIcon(inner) {
+    var t = document.createElement('template');
+    t.innerHTML = '<svg class="tico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+    return t.content.firstChild;
+  }
+  function typeContent(k, short) {
+    if (k === 'y') return [svgIcon(TYPE_SVG.y), el('span', { class: 'tlab' }, ['Yes', el('span', { class: 'tsep', text: ' / ' }), svgIcon(CROSS_SVG), 'No'])];
+    return [svgIcon(TYPE_SVG[k]), el('span', { class: 'tlab', text: short ? QP.TYPES[k].short : QP.TYPES[k].label })];
+  }
+  function typePicker(q, i) {
+    var wrap = el('div', { class: 'tsel' });
+    var btn = el('button', { class: 'tsel-btn', type: 'button', 'aria-haspopup': 'listbox', 'aria-expanded': 'false', 'aria-label': 'Question type: ' + QP.TYPES[q.k].label }, typeContent(q.k));
+    var list = el('div', { class: 'tsel-list', role: 'listbox', 'aria-label': 'Question type', hidden: true });
+    var opts = QP.TYPE_ORDER.map(function (k) {
+      var o = el('div', { class: 'tsel-opt', role: 'option', tabindex: '-1', 'data-k': k, 'aria-selected': k === q.k ? 'true' : 'false',
+        onclick: function () { choose(k); } }, typeContent(k));
+      o.addEventListener('mousemove', function () { if (document.activeElement !== o) o.focus({ preventScroll: true }); });
+      return o;
+    });
+    opts.forEach(function (o) { list.appendChild(o); });
+    function onDoc(e) { if (!wrap.contains(e.target)) close(); }
+    function open() {
+      list.hidden = false; btn.setAttribute('aria-expanded', 'true'); wrap.classList.add('is-open');
+      var cur = list.querySelector('[aria-selected="true"]') || opts[0];
+      cur.focus({ preventScroll: true });
+      document.addEventListener('mousedown', onDoc, true);
+    }
+    function close(refocus) {
+      if (list.hidden) return;
+      list.hidden = true; btn.setAttribute('aria-expanded', 'false'); wrap.classList.remove('is-open');
+      document.removeEventListener('mousedown', onDoc, true);
+      if (refocus) btn.focus();
+    }
+    function choose(k) {
+      close(true);
+      if (k === q.k) return;
+      convert(q, k); rerenderCard(i); changed({ goTo: i });
+      var b = document.querySelector('.qcard[data-i="' + i + '"] .tsel-btn'); if (b) b.focus();
+    }
+    btn.addEventListener('click', function () { if (list.hidden) open(); else close(true); });
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(); }
+    });
+    list.addEventListener('keydown', function (e) {
+      var at = opts.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); opts[Math.min(opts.length - 1, at + 1)].focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); opts[Math.max(0, at - 1)].focus(); }
+      else if (e.key === 'Home') { e.preventDefault(); opts[0].focus(); }
+      else if (e.key === 'End') { e.preventDefault(); opts[opts.length - 1].focus(); }
+      else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (at >= 0) choose(opts[at].getAttribute('data-k')); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); }
+      else if (e.key === 'Tab') { close(); }
+    });
+    wrap.appendChild(btn); wrap.appendChild(list);
+    return wrap;
+  }
+
   function addBar() {
     return el('div', { class: 'panel addbar' }, [el('span', { class: 'addbar-label', text: 'Add' })].concat(
       QP.TYPE_ORDER.map(function (k) {
-        return el('button', { class: 'btn btn-sm add-type', type: 'button', 'data-add': k, onclick: function () { addQuestion(k); } }, [
-          el('span', { class: 'ic', 'aria-hidden': 'true', text: QP.TYPES[k].icon }), QP.TYPES[k].short
-        ]);
+        return el('button', { class: 'btn btn-sm add-type', type: 'button', 'data-add': k, onclick: function () { addQuestion(k); } }, typeContent(k, true));
       })
     ));
   }
@@ -202,12 +267,7 @@
 
   function renderCard(q, i) {
     var n = survey.q.length;
-    var typeSel = el('select', {
-      class: 'type-select', 'aria-label': 'Question type',
-      onchange: function (e) { convert(q, e.target.value); rerenderCard(i); changed({ goTo: i }); }
-    }, QP.TYPE_ORDER.map(function (k) {
-      return el('option', { value: k, selected: k === q.k ? true : null }, QP.TYPES[k].icon + '  ' + QP.TYPES[k].label);
-    }));
+    var typeSel = typePicker(q, i);
 
     var head = el('div', { class: 'qcard-head' }, [
       el('span', { class: 'qnum', text: String(i + 1) }),
