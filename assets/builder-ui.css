@@ -27,7 +27,7 @@ body { background: var(--ui-bg); color: var(--ui-ink-strong); font-family: var(-
 
 /* ---------- top bar ---------- */
 .bar { border-bottom: 0; background: color-mix(in srgb, var(--ui-bg) 86%, transparent); padding: 12px 20px; gap: 6px; }
-.brand-mark { background: #23262d; border-radius: 8px; }
+.brand-mark { width: 28px; height: 28px; background: none; border-radius: 8px; display: block; }
 .saved { color: var(--ui-ink-muted); font-weight: 500; }
 
 /* ---------- buttons: white raised pills, dark primary, small lift on hover ---------- */
