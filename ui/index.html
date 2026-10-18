@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../assets/ui.css?v=2.5">
+<link rel="stylesheet" href="../assets/ui.css?v=2.6">
 <style>
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
@@ -76,7 +76,7 @@
 <body>
 <header class="top">
   <h1>QuickPoll UI</h1>
-  <span class="ver">components · v1.0</span>
+  <span class="ver">components · v1.1</span>
   <span class="sp"></span>
   <div class="seg" role="group" aria-label="Theme">
     <button type="button" data-theme-btn="auto" aria-pressed="true">Auto</button>
@@ -92,7 +92,7 @@
     <a href="#glow">Glow levels</a>
     <p>Buttons</p>
     <a href="#primary">Primary</a>
-    <a href="#primary-dark">Primary dark</a>
+    <a href="#primary-glow">Primary glow</a>
     <a href="#secondary">Secondary</a>
     <a href="#ghost">Ghost</a>
     <a href="#icon">Icon button</a>
@@ -221,24 +221,24 @@
         '<div style="font-size:15px;font-weight:500;color:var(--ui-ink-muted)">0123456789 · Aa Gg Rr · Привет, это кириллица</div></div>'
     },
     {
-      id: 'glow', title: 'Glow levels', lead: 'One warm glow, three strengths. The strong one marks the single most important action on a screen; the others are quiet accents.',
+      id: 'glow', title: 'Glow levels', lead: 'One warm glow, three strengths. Glow Soft marks what is selected; Glow Hint is a rare accent. Glow Strong (the warm primary) is kept in the system but not used now — the primary button is dark.',
       html: '<div class="canvas"><div class="glows">' +
-        '<div class="glow-tile"><div class="glow-demo">' + btn('primary', 'Continue') + '</div><h3>Glow Strong<span class="badge-n">1 per screen</span></h3><p>Halo, white top light, warm cast shadow. Primary button only.</p></div>' +
+        '<div class="glow-tile"><div class="glow-demo">' + btn('primary ui-btn--glow', 'Continue') + '</div><h3>Glow Strong<span class="badge-n">not used now</span></h3><p>Halo, white top light, warm cast shadow. The warm primary (.ui-btn--glow).</p></div>' +
         '<div class="glow-tile"><div class="glow-demo"><div class="glow-card ui-glow-soft">Selected answer</div></div><h3>Glow Soft</h3><p>Faint warm hairline and a whisper of glow. Selected option.</p></div>' +
         '<div class="glow-tile"><div class="glow-demo"><div class="glow-card ui-glow-hint">New feature</div></div><h3>Glow Hint</h3><p>Gradient rim only, no halo. Rare secondary accents.</p></div>' +
         '</div></div>'
     },
     {
       id: 'primary', title: 'Primary button', rule: 'Only one per screen',
-      lead: 'The main next step: Next, Send answers, Get link. Hover lifts the button by 1px and makes the glow a bit stronger; pressing sinks the button and shortens its shadow.',
+      lead: 'The main next step: Next, Send answers, Get link. A dark pill, no glow — calm and unambiguous. Hover lifts it by 1px and darkens it a touch; pressing sinks it and shortens its shadow.',
       html: '<div class="canvas">' + statesRow('primary', 'Next', { trail: 'arrow' }, 'Medium') + statesRow('primary', 'Next', { size: 'sm', trail: 'arrow' }, 'Small') + '</div>' +
         '<div class="canvas"><p class="row-title">Try it</p><div class="live">' + btn('primary', 'Send answers') + btn('primary', 'Next', { trail: 'arrow' }) + btn('primary', 'Get link', { size: 'sm' }) + '</div></div>' +
         code(snippet('primary', 'Next', { trail: 'arrow' }))
     },
     {
-      id: 'primary-dark', title: 'Primary — dark', rule: 'In the system, not used yet',
-      lead: 'An alternative primary without glow: strong and unambiguous. Kept for future use — the warm-glow primary stays the default.',
-      html: '<div class="canvas">' + statesRow('dark', 'Copy link', {}, 'Medium') + '</div>' + code(snippet('dark', 'Copy link', {}))
+      id: 'primary-glow', title: 'Primary — warm glow', rule: 'In the system, not used now',
+      lead: 'The earlier primary with a warm halo. Kept for possible themes — add .ui-btn--glow next to .ui-btn--primary.',
+      html: '<div class="canvas">' + statesRow('primary ui-btn--glow', 'Copy link', {}, 'Medium') + '</div>' + code(snippet('primary ui-btn--glow', 'Copy link', {}))
     },
     {
       id: 'secondary', title: 'Secondary button',
@@ -262,11 +262,11 @@
         code(snippet('secondary', 'Upload image', { icon: 'upload' }))
     },
     {
-      id: 'surfaces', title: 'Buttons on surfaces', rule: 'Always white buttons · no gray on gray',
-      lead: 'Buttons are always white. On the gray page they get a softer shadow and half of the primary glow. On white surfaces (dialogs, cards — .ui-surface-white or .ui-dialog) the shadow and glow drop to a quarter, so the primary stays primary without looking dirty.',
+      id: 'surfaces', title: 'Buttons on surfaces', rule: 'No gray buttons',
+      lead: 'Secondary buttons are always white; the primary is dark. On white surfaces (dialogs, cards — .ui-surface-white or .ui-dialog) shadows get softer automatically, so nothing looks dirty.',
       html: '<div style="display:grid;gap:14px;margin-bottom:14px">' +
-        '<div class="canvas" style="margin:0"><p class="row-title">Gray page · white buttons · glow 50%</p><div class="live" style="justify-content:space-between;max-width:520px">' + btn('secondary', 'Previous', { lead: 'back' }) + btn('primary', 'Next', { trail: 'arrow' }) + '</div></div>' +
-        '<div class="canvas" style="margin:0"><p class="row-title">White surface · white buttons · glow 25%</p><div class="ui-surface-white" style="border-radius:20px;padding:18px 16px;box-shadow:0 0 0 1px var(--ui-line);max-width:560px"><div class="live" style="justify-content:flex-end;gap:8px;max-width:520px;margin-left:auto">' + btn('ghost', 'Cancel') + btn('secondary', 'Open') + btn('primary', 'Copy link') + '</div></div></div>' +
+        '<div class="canvas" style="margin:0"><p class="row-title">Gray page · softer shadows</p><div class="live" style="justify-content:space-between;max-width:520px">' + btn('secondary', 'Previous', { lead: 'back' }) + btn('primary', 'Next', { trail: 'arrow' }) + '</div></div>' +
+        '<div class="canvas" style="margin:0"><p class="row-title">White surface · shadows even softer</p><div class="ui-surface-white" style="border-radius:20px;padding:18px 16px;box-shadow:0 0 0 1px var(--ui-line);max-width:560px"><div class="live" style="justify-content:flex-end;gap:8px;max-width:520px;margin-left:auto">' + btn('ghost', 'Cancel') + btn('secondary', 'Open') + btn('primary', 'Copy link') + '</div></div></div>' +
         '</div>' +
         code('<!-- gray page: nothing extra, buttons are white by default -->\n<button class="ui-btn ui-btn--primary">…</button>\n\n<!-- white surface: shadow and glow soften automatically -->\n<div class="ui-surface-white"> … </div>')
     },

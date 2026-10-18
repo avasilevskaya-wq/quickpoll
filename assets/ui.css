@@ -613,3 +613,34 @@
 /* just picked + still under the pointer: keep showing "selected" (glow + full mark) */
 .ui-option[aria-checked="true"].just-picked:hover, .ui-yn__btn[aria-checked="true"].just-picked:hover,
 .ui-key[aria-checked="true"].just-picked:hover, .ui-imgcard[aria-checked="true"].just-picked:hover { box-shadow: var(--ui-soft-ring), var(--ui-raised-hover); }
+
+/* =====================================================================
+   PRIMARY = DARK (2026-10-19). Calm, no glow: the dark pill is the one strong accent on a screen.
+   The warm-glow primary stays in the system as .ui-btn--glow (add it next to .ui-btn--primary), not used now.
+   ===================================================================== */
+.ui-btn--primary:not(.ui-btn--glow)::before { display: none; }
+.ui-btn--primary:not(.ui-btn--glow) .ui-btn__face::before { display: none; }
+.ui-btn.ui-btn--primary:not(.ui-btn--glow)::after {
+  inset: 0; z-index: -1; transform: translate(-6%, 24%);
+  background: rgba(35, 38, 45, .55); filter: blur(7px); opacity: .5;
+}
+.ui-surface-white .ui-btn.ui-btn--primary:not(.ui-btn--glow)::after, .ui-dialog .ui-btn.ui-btn--primary:not(.ui-btn--glow)::after { opacity: .3; }
+.ui-btn.ui-btn--primary:not(.ui-btn--glow) .ui-btn__face,
+.ui-surface-white .ui-btn.ui-btn--primary:not(.ui-btn--glow) .ui-btn__face,
+.ui-dialog .ui-btn.ui-btn--primary:not(.ui-btn--glow) .ui-btn__face {
+  background: #23262d; color: #ffffff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+.ui-btn.ui-btn--primary:not(.ui-btn--glow):hover .ui-btn__face, .ui-btn.ui-btn--primary:not(.ui-btn--glow).is-hover .ui-btn__face {
+  background: #15171c; color: #ffffff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+.ui-btn.ui-btn--primary:not(.ui-btn--glow):hover:not(:active):not(:disabled):not(.is-disabled)::after,
+.ui-btn.ui-btn--primary:not(.ui-btn--glow).is-hover::after { transform: translate(-7%, 34%); opacity: .6; }
+.ui-btn.ui-btn--primary:not(.ui-btn--glow):active .ui-btn__face, .ui-btn.ui-btn--primary:not(.ui-btn--glow).is-pressed .ui-btn__face {
+  background: #15171c; color: #ffffff; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .35);
+}
+.ui-btn.ui-btn--primary:not(.ui-btn--glow):active::after, .ui-btn.ui-btn--primary:not(.ui-btn--glow).is-pressed::after { transform: translate(-3%, 10%); }
+.ui-btn.ui-btn--primary:not(.ui-btn--glow):disabled .ui-btn__face, .ui-btn.ui-btn--primary:not(.ui-btn--glow).is-disabled .ui-btn__face {
+  background: var(--ui-face-flat); color: var(--ui-ink-disabled); box-shadow: inset 0 0 0 1px var(--ui-line);
+}
+:root[data-theme="dark"] .ui-btn.ui-btn--primary:not(.ui-btn--glow) .ui-btn__face { background: #f1f2f4; color: #15171b; }
+:root[data-theme="dark"] .ui-btn.ui-btn--primary:not(.ui-btn--glow):hover .ui-btn__face { background: #ffffff; color: #07080a; }

@@ -8,13 +8,13 @@
 <meta property="og:title" content="Quick poll — tap to answer">
 <meta property="og:description" content="Just a few taps, about a minute. No sign-up needed.">
 <meta name="robots" content="noindex">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b5bfd'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2323262d'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="../assets/base.css?v=1.8">
-<link rel="stylesheet" href="../assets/ui.css?v=2.5">
-<link rel="stylesheet" href="../assets/survey.css?v=1.1">
+<link rel="stylesheet" href="../assets/ui.css?v=2.6">
+<link rel="stylesheet" href="../assets/survey.css?v=1.2">
 <style>
   html, body { height: 100%; }
   body { display: flex; justify-content: center; overflow-x: clip; }
@@ -23,6 +23,10 @@
   @media (min-width: 680px) {
     body { align-items: flex-start; padding: 40px 24px; }
     .page { min-height: 0; }
+    /* room for button shadows: the runner clips horizontally (for the slide-in animation) */
+    .page .qp-runner { margin: 0 -56px; padding: 0 56px; }
+    .page .qp-top { padding: 0 8px; }
+    .page .qp-screen { padding: 36px 8px 48px; }
   }
   .state { padding: 72px 24px; text-align: center; }
   .state h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 10px; }

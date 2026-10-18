@@ -101,11 +101,9 @@ body { background: var(--ui-bg); color: var(--ui-ink-strong); font-family: var(-
 
 .qp-empty { color: var(--ui-ink-muted); }
 
-@media (min-width: 680px) {
-  /* room for button glow and shadows: the runner clips horizontally (for the slide-in animation) */
-  .qp-runner { margin: 0 -56px; padding: 0 56px; }
-  .qp-top { padding: 0 8px; }
-  .qp-screen { padding: 36px 8px 48px; }
-}
+/* desktop page layout (wide runner margins) lives in s/index.html, so the builder preview is not affected */
 @media (hover: none) { .ui-imgcard .ui-option__key, .ui-option__key { display: none; } }
 .qp-lb-badge[hidden] { display: none !important; }
+/* on the dark image viewer the dark primary would disappear: invert it */
+.qp-lightbox .ui-btn.ui-btn--primary .ui-btn__face, .qp-lightbox .ui-btn.ui-btn--primary:hover .ui-btn__face { background: #ffffff; color: #07080a; }
+.qp-lightbox .ui-btn.ui-btn--primary::after { opacity: 0; }

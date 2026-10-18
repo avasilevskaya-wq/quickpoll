@@ -69,7 +69,7 @@
   function previewSurvey() { return QP.normalize(clone(survey)); }
 
   function startPreview() {
-    runner = new QP.Runner($('preview'), previewSurvey(), { preview: true });
+    runner = new QP.Runner($('preview'), previewSurvey(), { preview: true, ui: true });
   }
 
   /* ---------- Toast ---------- */
