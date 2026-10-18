@@ -129,7 +129,16 @@ body { background: var(--ui-bg); color: var(--ui-ink-strong); font-family: var(-
 .qp-scale-wrap { --k: 52px; }
 .qp-scale-wrap:has(.qp-scale-10) { --k: 40px; }
 @container (max-width: 520px) { .qp-scale-wrap:has(.qp-scale-10) { --k: 42px; } }
-.qp-scale-wrap .qp-scale-labels { position: relative; display: block; height: 2.6em; }
+.qp-scale-wrap .qp-scale-labels { position: relative; display: block; height: 2.6em; margin-top: 5px; }   /* 5px: a label belongs to its circle (proximity) */
 .qp-scale-wrap .qp-scale-labels span { position: absolute; top: 0; width: max-content; max-width: 10em; white-space: normal; text-align: center; line-height: 1.3; }
 .qp-scale-wrap .qp-scale-labels span:first-child { left: calc(var(--k) / 2); transform: translateX(-50%); }
 .qp-scale-wrap .qp-scale-labels span:last-child { right: calc(var(--k) / 2); transform: translateX(50%); }
+/* "ladder" 1–10: the first label sits right under circle 1, in the free slot of the lower row */
+@container (max-width: 520px) {
+  .qp-scale-wrap:has(.qp-scale-10) .qp-scale-labels span { white-space: nowrap; max-width: none; }
+  .qp-scale-wrap:has(.qp-scale-10) .qp-scale-labels span:first-child { top: calc(-1 * (var(--k) + 10px)); }   /* 3px under circle 1 */
+  /* too long for the slot: rows move apart, the label sits between them on one line, centred under circle 1 */
+  .qp-scale-wrap.is-long-label .qp-scale-10 { row-gap: 32px; }
+  /* proximity: 4px to circle 1 above (its own), ~11px to the lower row below (not its own) */
+  .qp-scale-wrap.is-long-label .qp-scale-labels span:first-child { top: calc(-1 * (var(--k) + 33px)); }
+}

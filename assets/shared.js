@@ -572,7 +572,7 @@
     if (!quiet && !this.opts.preview) {
       if (window.scrollY > 0) window.scrollTo(0, 0);
       var touch = window.matchMedia && window.matchMedia('(hover: none)').matches;
-      var f = touch ? null : wrap.querySelector('[data-autofocus]');
+      var f = touch ? null : wrap.querySelector('input[data-autofocus], textarea[data-autofocus]');   // only text fields: no focus ring on answers after a mouse click
       if (f) setTimeout(function () { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }, 30);
     }
   };
@@ -780,12 +780,26 @@
     }
     var labels = q.l || ['', ''];
     var ui = this.opts.ui;
-    return el('div', { class: 'qp-scale-wrap' }, [
+    var wrap = el('div', { class: 'qp-scale-wrap' }, [
       el('div', { class: (ui ? 'ui-scale ' : '') + 'qp-scale qp-scale-' + max, role: 'radiogroup', 'aria-labelledby': 'qp-q-' + i }, btns),
       (labels[0] || labels[1]) ? el('div', { class: ui ? 'ui-scale__labels qp-scale-labels' : 'qp-scale-labels' }, [
         el('span', { text: labels[0] || '' }), el('span', { text: labels[1] || '' })
       ]) : null
     ]);
+    // 1–10 "ladder" on narrow screens: the first label sits under circle 1 in the free slot of the lower row.
+    // If it is too long for that slot, the two rows move apart and the label goes in between, on one line.
+    if (ui && max === 10 && labels[0] && typeof ResizeObserver === 'function') {
+      var ro = new ResizeObserver(function () {
+        if (!wrap.isConnected) { ro.disconnect(); return; }
+        var lab = wrap.querySelector('.qp-scale-labels span');
+        var key = wrap.querySelector('.ui-key');
+        var grid = getComputedStyle(wrap.querySelector('.ui-scale')).display === 'grid';
+        var long = !!(grid && lab && key && lab.scrollWidth / 2 > key.offsetWidth / 2 + 4);
+        if (wrap.classList.contains('is-long-label') !== long) wrap.classList.toggle('is-long-label', long);
+      });
+      ro.observe(wrap);
+    }
+    return wrap;
   };
 
   /* Image aspect ratios, remembered so re-renders don't jump. */
