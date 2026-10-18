@@ -33,8 +33,23 @@ body { background: var(--ui-bg); color: var(--ui-ink-strong); font-family: var(-
 
 /* answers */
 .qp-options { display: grid; gap: 12px; }
-.qp-yesno { margin-top: 4px; }
-.qp-scale-wrap { display: inline-block; max-width: 100%; }
+.qp-yesno { display: flex; justify-content: center; margin-top: 4px; }
+/* scale: a centered block that never stretches; end labels sit under the first and the last key */
+.qp-screen { container-type: inline-size; }
+.qp-scale-wrap { display: block; width: fit-content; max-width: 100%; margin-left: auto; margin-right: auto; }
+.qp-scale-wrap .ui-scale { flex-wrap: nowrap; justify-content: center; }
+.qp-scale-wrap .qp-scale-labels { gap: 16px; }
+/* 1–10 that doesn't fit in one row: two rows of five, the lower row shifted one key to the right */
+@container (max-width: 520px) {
+  .qp-scale-10 { display: grid; grid-template-columns: repeat(6, 42px); gap: 8px 8px; }
+  .qp-scale-10 .ui-key { width: 42px; height: 42px; font-size: 15px; }
+  .qp-scale-10 .ui-key:nth-child(n+6) { grid-row: 2; }
+  .qp-scale-10 .ui-key:nth-child(1) { grid-column: 1; } .qp-scale-10 .ui-key:nth-child(2) { grid-column: 2; }
+  .qp-scale-10 .ui-key:nth-child(3) { grid-column: 3; } .qp-scale-10 .ui-key:nth-child(4) { grid-column: 4; }
+  .qp-scale-10 .ui-key:nth-child(5) { grid-column: 5; } .qp-scale-10 .ui-key:nth-child(6) { grid-column: 2; }
+  .qp-scale-10 .ui-key:nth-child(7) { grid-column: 3; } .qp-scale-10 .ui-key:nth-child(8) { grid-column: 4; }
+  .qp-scale-10 .ui-key:nth-child(9) { grid-column: 5; } .qp-scale-10 .ui-key:nth-child(10) { grid-column: 6; }
+}
 .qp-text, .qp-note { display: block; width: 100%; }
 .qp-note { margin-top: 18px; }
 .qp-add-note { margin-top: 14px; margin-left: -14px; }
@@ -107,3 +122,14 @@ body { background: var(--ui-bg); color: var(--ui-ink-strong); font-family: var(-
 /* on the dark image viewer the dark primary would disappear: invert it */
 .qp-lightbox .ui-btn.ui-btn--primary .ui-btn__face, .qp-lightbox .ui-btn.ui-btn--primary:hover .ui-btn__face { background: #ffffff; color: #07080a; }
 .qp-lightbox .ui-btn.ui-btn--primary::after { opacity: 0; }
+
+/* comment link sits on its own line under Yes/No and scales */
+.qp-add-note { display: flex; width: fit-content; }
+/* end labels are centred under their circles: the first and the last (1 and 5, or 1 and 10) — in every layout */
+.qp-scale-wrap { --k: 52px; }
+.qp-scale-wrap:has(.qp-scale-10) { --k: 40px; }
+@container (max-width: 520px) { .qp-scale-wrap:has(.qp-scale-10) { --k: 42px; } }
+.qp-scale-wrap .qp-scale-labels { position: relative; display: block; height: 2.6em; }
+.qp-scale-wrap .qp-scale-labels span { position: absolute; top: 0; width: max-content; max-width: 10em; white-space: normal; text-align: center; line-height: 1.3; }
+.qp-scale-wrap .qp-scale-labels span:first-child { left: calc(var(--k) / 2); transform: translateX(-50%); }
+.qp-scale-wrap .qp-scale-labels span:last-child { right: calc(var(--k) / 2); transform: translateX(50%); }

@@ -644,3 +644,20 @@
 }
 :root[data-theme="dark"] .ui-btn.ui-btn--primary:not(.ui-btn--glow) .ui-btn__face { background: #f1f2f4; color: #15171b; }
 :root[data-theme="dark"] .ui-btn.ui-btn--primary:not(.ui-btn--glow):hover .ui-btn__face { background: #ffffff; color: #07080a; }
+
+/* ---------- 2026-10-19 polish ---------- */
+/* primary hover: label and arrow turn orange */
+.ui-btn.ui-btn--primary:not(.ui-btn--glow):not(:disabled):not(.is-disabled):hover .ui-btn__face,
+.ui-btn.ui-btn--primary:not(.ui-btn--glow):not(:disabled):not(.is-disabled).is-hover .ui-btn__face,
+.ui-btn.ui-btn--primary:not(.ui-btn--glow):not(:disabled):not(.is-disabled):active .ui-btn__face,
+.ui-btn.ui-btn--primary:not(.ui-btn--glow):not(:disabled):not(.is-disabled).is-pressed .ui-btn__face { color: var(--ui-mark); }
+/* disabled primary: the same soft shadow as other light buttons, not the dark one */
+.ui-btn.ui-btn--primary:not(.ui-btn--glow):disabled::after, .ui-btn.ui-btn--primary:not(.ui-btn--glow).is-disabled::after {
+  transform: translate(-6%, 22%); background: rgba(var(--ui-cast), .32); filter: blur(6px); opacity: .425;
+}
+/* round choices (scale keys, Yes/No): a clearer selected state */
+:root { --ui-ring-strong: 0 0 0 1.5px rgba(var(--ui-glow), .7), 0 0 16px 3px rgba(var(--ui-glow), .3); }
+.ui-key[aria-checked="true"], .ui-key.is-selected, .ui-yn__btn[aria-checked="true"], .ui-yn__btn.is-selected { box-shadow: var(--ui-ring-strong), var(--ui-raised); }
+.ui-key[aria-checked="true"], .ui-key.is-selected { color: var(--ui-mark); }
+.ui-key[aria-checked="true"].just-picked:hover, .ui-yn__btn[aria-checked="true"].just-picked:hover { box-shadow: var(--ui-ring-strong), var(--ui-raised-hover); }
+.ui-key.is-selected-hover, .ui-yn__btn.is-selected-hover { box-shadow: var(--ui-raised-hover); }

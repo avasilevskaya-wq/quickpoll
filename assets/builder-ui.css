@@ -41,7 +41,7 @@ body { background: var(--ui-bg); color: var(--ui-ink-strong); font-family: var(-
 .btn:active:not(:disabled) { transform: translate(-1px, 1px); box-shadow: var(--ui-raised-pressed); }
 .btn:disabled { opacity: 1; color: var(--ui-ink-disabled); background: var(--ui-face-flat); box-shadow: inset 0 0 0 1px var(--ui-line); }
 .btn-primary { background: #23262d; color: #ffffff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), -3px 6px 14px rgba(35, 38, 45, .26); }
-.btn-primary:hover:not(:disabled) { background: #15171c; color: #ffffff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), -4px 9px 18px rgba(35, 38, 45, .3); }
+.btn-primary:hover:not(:disabled) { background: #15171c; color: var(--ui-mark); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), -4px 9px 18px rgba(35, 38, 45, .3); }
 .btn-primary:active:not(:disabled) { background: #15171c; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .35); }
 .btn-quiet { background: transparent; box-shadow: none; color: var(--ui-ink); }
 .btn-quiet:hover:not(:disabled) { background: rgba(var(--ui-cast), .12); color: var(--ui-ink-strong); transform: none; box-shadow: none; }
@@ -164,3 +164,9 @@ dialog::backdrop { background: rgba(20, 22, 28, .32); }
 .upload-zone.is-over { border-color: rgba(var(--ui-glow), .7); background: #fffaf5; }
 .upload-alt { color: var(--ui-ink-muted); }
 .upload-alt .linkish { color: var(--ui-ink-strong); }
+
+/* thin, quiet scrollbar inside the preview phone */
+.phone-screen { scrollbar-width: thin; scrollbar-color: rgba(var(--ui-cast), .45) transparent; }
+.phone-screen::-webkit-scrollbar { width: 6px; }
+.phone-screen::-webkit-scrollbar-thumb { background: rgba(var(--ui-cast), .45); border-radius: 6px; }
+.phone-screen::-webkit-scrollbar-track { background: transparent; }
