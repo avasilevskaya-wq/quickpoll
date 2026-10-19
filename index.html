@@ -11,9 +11,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="assets/base.css?v=1.8">
 <link rel="stylesheet" href="assets/ui.css?v=2.7">
-<link rel="stylesheet" href="assets/survey.css?v=2.1">
+<link rel="stylesheet" href="assets/survey.css?v=2.2">
 <link rel="stylesheet" href="assets/builder.css?v=1.6">
-<link rel="stylesheet" href="assets/builder-ui.css?v=1.3">
+<link rel="stylesheet" href="assets/builder-ui.css?v=1.4">
 </head>
 <body>
 <header class="bar">
@@ -106,6 +106,29 @@
   </div>
 </dialog>
 
+<!-- Link button for a question -->
+<dialog id="dlg-qlink" aria-labelledby="dlg-qlink-title">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="dlg-qlink-title">Link button</h2><button class="icon-btn" type="button" data-close aria-label="Close">✕</button></div>
+    <p>Shown under the question. Opens in a new tab — handy for a prototype, a Figma file or a document.</p>
+    <div>
+      <label class="field-label" for="qlink-text">Button text</label>
+      <input class="field" id="qlink-text" type="text" maxlength="60" placeholder="e.g. Open the prototype">
+    </div>
+    <div>
+      <label class="field-label" for="qlink-url">Link</label>
+      <input class="field" id="qlink-url" type="url" placeholder="https://…">
+    </div>
+    <div class="note err" id="qlink-err" hidden></div>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn btn-quiet btn-danger" id="qlink-remove" type="button">Remove</button>
+      <span class="spacer"></span>
+      <button class="btn" type="button" data-close>Cancel</button>
+      <button class="btn btn-primary" id="qlink-save" type="button">Save</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- Upload image -->
 <dialog id="dlg-upload" aria-labelledby="dlg-upload-title">
   <div class="dlg">
@@ -122,8 +145,8 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="config.js?v=1.6"></script>
-<script src="assets/shared.js?v=2.1"></script>
+<script src="assets/shared.js?v=2.2"></script>
 <script src="assets/templates.js?v=1.6"></script>
-<script src="assets/builder.js?v=2.0"></script>
+<script src="assets/builder.js?v=2.1"></script>
 </body>
 </html>

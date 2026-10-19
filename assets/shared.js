@@ -123,6 +123,10 @@
         var l = Array.isArray(rq.l) ? rq.l : [];
         q.l = [str(l[0], 60), str(l[1], 60)];
       }
+      // link button under the hint: [button text, url]
+      if (Array.isArray(rq.w) && QP.safeUrl(rq.w[1])) q.w = [str(rq.w[0], 60), QP.safeUrl(rq.w[1])];
+      // pictures shown with the question (any type), just to look at
+      if (Array.isArray(rq.m)) { var mm = rq.m.slice(0, 12).map(function (u) { return QP.safeUrl(u); }).filter(Boolean); if (mm.length) q.m = mm; }
       s.q.push(q);
     });
     return s;
@@ -150,6 +154,8 @@
         if (q.s === 10) o.s = 10;
         if (q.l && (q.l[0] || q.l[1])) o.l = [q.l[0] || '', q.l[1] || ''];
       }
+      if (q.w && q.w[1]) o.w = [q.w[0] || '', q.w[1]];
+      if (q.m && q.m.length) { var mm = q.m.filter(Boolean); if (mm.length) o.m = mm; }
       return o;
     });
     return out;
@@ -167,6 +173,7 @@
         var filled = (q.o || []).filter(function (o) { return o.trim(); }).length;
         if (filled < 2) errs.push({ q: i, msg: n + ': add at least 2 options.' });
       }
+      if (q.w && q.w[1] && !String(q.w[0] || '').trim()) errs.push({ q: i, msg: n + ': give the link button a name.' });
       if (q.k === 'i') {
         var withImg = (q.i || []).filter(function (u) { return u; }).length;
         if (withImg < 2) errs.push({ q: i, msg: n + ': add at least 2 image links.' });
@@ -254,6 +261,8 @@
    *   Question text [text]
    *   Flags (comma-separated inside the brackets): optional, comment
    *   A line starting with "  ?" or "? " under a question is a hint.
+   *   link: Button text | https://…     → a link button under the hint
+   *   image: https://…                  → a picture shown with the question (one per line, any type)
    */
   QP.toText = function (s) {
     var lines = [];
@@ -279,6 +288,8 @@
       if (q.c) tags.push('comment');
       lines.push(q.t + (tags.length ? ' [' + tags.join(', ') + ']' : ''));
       if (q.h) lines.push('? ' + q.h);
+      if (q.w && q.w[1]) lines.push('link: ' + (q.w[0] || '') + ' | ' + q.w[1]);
+      (q.m || []).forEach(function (u) { if (u) lines.push('image: ' + u); });
       if (q.o && (q.k === 's' || q.k === 'm' || q.k === 'i')) q.o.forEach(function (o, i) {
         if (!o && !(q.i && q.i[i])) return;
         lines.push('- ' + o + (q.k === 'i' ? ' | ' + ((q.i || [])[i] || '') : ''));
@@ -313,6 +324,13 @@
         return;
       }
       if (/^\?\s*/.test(line) && cur && !cur.h) { cur.h = line.replace(/^\?\s*/, ''); return; }
+      if (/^link\s*:/i.test(line) && cur) {
+        var lp2 = line.replace(/^link\s*:\s*/i, '').split('|');
+        var lu = lp2.length > 1 ? lp2.pop().trim() : lp2.pop().trim();
+        cur.w = [lp2.join('|').trim() || 'Open link', lu];
+        return;
+      }
+      if (/^image\s*:/i.test(line) && cur) { (cur.m = cur.m || []).push(line.replace(/^image\s*:\s*/i, '')); return; }
       // a new question
       var m = line.match(/^(.*?)\s*\[([^\]]*)\]\s*$/);
       var qt = m ? m[1] : line;
@@ -380,6 +398,7 @@
     check: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-6.5"/></svg>',
     yes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     no: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
+    out: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5H5.5A1.5 1.5 0 0 0 4 6.5v8A1.5 1.5 0 0 0 5.5 16h8a1.5 1.5 0 0 0 1.5-1.5V12M11 4h5v5M16 4l-7 7"/></svg>',
     zoom: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8.5 3.5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12.2 12.2L16.5 16.5M8.5 6.5v4M6.5 8.5h4"/></svg>'
   };
   function icon(name) { var t = document.createElement('template'); t.innerHTML = SVG[name]; return t.content.firstChild; }
@@ -637,7 +656,9 @@
     }
     kids.push(el('h2', { class: 'qp-q', id: 'qp-q-' + i, text: q.t || 'Untitled question' }));
     var sub = q.h || ({ m: 'Select all that apply' })[q.k] || '';
-    if (sub) kids.push(el('p', { class: 'qp-hint', text: sub }));
+    if (sub) kids.push(el('p', { class: 'qp-hint' }, linkify(sub)));
+    if (q.w && q.w[1]) kids.push(this._linkBtn(q.w));
+    if (q.m && q.m.length) kids.push(this._media(i, q.m));
 
     if (q.k === 's' || q.k === 'm') kids.push(this._choices(i, q, a));
     else if (q.k === 'y') kids.push(this._yesno(i, q, a));
@@ -689,6 +710,45 @@
   Runner.prototype._refreshNav = function (i) {
     var old = this.root.querySelector('.qp-nav');
     if (old) old.replaceWith(this._nav(i));
+  };
+
+  /* Text with web addresses turned into links (opened in a new tab). Built from text nodes — no HTML injection. */
+  function linkify(text) {
+    var out = [], re = /https?:\/\/[^\s<>"']+/g, last = 0, m;
+    while ((m = re.exec(text))) {
+      var url = m[0].replace(/[.,;:!?)\]]+$/, '');
+      if (m.index > last) out.push(text.slice(last, m.index));
+      var safe = QP.safeUrl(url);
+      out.push(safe ? el('a', { class: 'qp-autolink', href: safe, target: '_blank', rel: 'noopener noreferrer', text: url }) : url);
+      last = m.index + url.length;
+      re.lastIndex = last;
+    }
+    if (last < text.length) out.push(text.slice(last));
+    return out;
+  }
+
+  /* Link button under the hint: opens in a new tab. */
+  Runner.prototype._linkBtn = function (w) {
+    var label = (w[0] || '').trim() || 'Open link';
+    if (!this.opts.ui) return el('p', { class: 'qp-qlink-wrap' }, el('a', { class: 'qp-link', href: w[1], target: '_blank', rel: 'noopener noreferrer' }, label + ' ↗'));
+    return el('div', { class: 'qp-qlink-wrap' }, el('a', { class: 'ui-btn ui-btn--secondary ui-btn--sm qp-qlink', href: w[1], target: '_blank', rel: 'noopener noreferrer' },
+      el('span', { class: 'ui-btn__face' }, [label, icon('out')])));
+  };
+
+  /* Pictures that belong to the question (any type): look, enlarge, page through — nothing to choose. */
+  Runner.prototype._media = function (i, urls) {
+    var self = this;
+    var gallery = urls.map(function (u, n) { return { url: u, value: urls.length > 1 ? 'Picture ' + (n + 1) : '' }; });
+    var wrap = el('div', { class: 'qp-media qp-media-' + Math.min(urls.length, 3) });
+    urls.forEach(function (u, n) {
+      var img = el('img', { src: u, alt: 'Picture ' + (n + 1), referrerpolicy: 'no-referrer', loading: 'lazy' });
+      img.addEventListener('error', function () { img.replaceWith(el('span', { class: 'qp-img-missing', text: 'Image unavailable' })); });
+      wrap.appendChild(el('button', {
+        class: 'qp-media-item', type: 'button', 'aria-label': 'Enlarge picture ' + (n + 1) + ' of ' + urls.length,
+        onclick: function () { self._lightbox(i, gallery, n, true); }
+      }, [el('span', { class: 'qp-media-box' }, img), el('span', { class: 'qp-media-zoom', 'aria-hidden': 'true' }, icon('zoom'))]));
+    });
+    return wrap;
   };
 
   function keyFor(idx) { return idx < 9 ? String(idx + 1) : (idx < 35 ? String.fromCharCode(97 + idx - 9) : ''); }
@@ -899,7 +959,7 @@
   }
 
   /* Full-screen gallery: ‹ › arrows, keyboard ← →, swipe, counter, and "Choose this" for the picture on screen. */
-  Runner.prototype._lightbox = function (qi, gallery, start) {
+  Runner.prototype._lightbox = function (qi, gallery, start, viewOnly) {
     var self = this;
     if (!gallery.length) return;
     var idx = Math.max(0, start);
@@ -920,7 +980,8 @@
       img.src = g.url; img.alt = g.value;
       label.textContent = g.value;
       count.textContent = many ? (idx + 1) + ' / ' + gallery.length : '';
-      var on = (self.answers[qi] || {}).v === g.value;
+      var on = !viewOnly && (self.answers[qi] || {}).v === g.value;
+      choose.hidden = !!viewOnly;
       setBtnLabel(choose, on ? 'Unselect' : 'Choose this');
       choose.className = self.opts.ui
         ? 'ui-btn qp-lb-choose ' + (on ? 'ui-btn--secondary' : 'ui-btn--primary')
@@ -931,13 +992,14 @@
     var close = function () {
       box.remove(); document.removeEventListener('keydown', onKey, true);
       self.render(true);
-      var again = self.root.querySelectorAll('.qp-zoom, .qp-zoom-ui')[idx];
+      var again = self.root.querySelectorAll(viewOnly ? '.qp-media-item' : '.qp-zoom, .qp-zoom-ui')[idx];
       if (again) again.focus(); else if (prevFocus && prevFocus.focus) prevFocus.focus();
     };
     var onKey = function (e) {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
       else if (e.key === 'ArrowRight' && many) { e.preventDefault(); e.stopPropagation(); show(idx + 1); }
       else if (e.key === 'ArrowLeft' && many) { e.preventDefault(); e.stopPropagation(); show(idx - 1); }
+      else if (e.key === 'Enter' && viewOnly) { e.preventDefault(); e.stopPropagation(); close(); }
       else if (e.key === 'Enter' && e.target !== choose && !(e.target.classList && e.target.classList.contains('qp-lb-close'))) { e.preventDefault(); e.stopPropagation(); choose.click(); }
       else e.stopPropagation();   // keep the survey's shortcuts (digits, Enter) from acting behind the viewer
     };
@@ -976,7 +1038,7 @@
     show(idx);
     document.body.appendChild(box);
     document.addEventListener('keydown', onKey, true);
-    choose.focus();
+    if (viewOnly) box.querySelector('.qp-lb-close').focus(); else choose.focus();
   };
 
   Runner.prototype._text = function (i, q, a) {

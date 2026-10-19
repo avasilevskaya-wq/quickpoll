@@ -44,12 +44,20 @@ Which homepage do you prefer? [images]
 - Option A | images/home-a.png              ← local file (uploaded on build) or https:// link
 - Option B | https://…
 Anything else we should know? [text]
+
+Do you approve this flow? [yes/no, comment]
+? Have a look at the three screens.
+link: Open the prototype | https://www.figma.com/proto/…   ← a link button under the hint (any type)
+image: images/step-1.png                                   ← pictures to look at, not to choose (any type)
+image: images/step-2.png
 ```
 
 Flags go inside the brackets, comma-separated: `multi`, `yes/no`, `1-5` / `1-10` (with optional
 `: low | high` labels), `images` (+ `grid` / `row` / `full` layout), `text`, `optional`
 (choice questions are required by default), `required` (for text questions), `comment`
 (lets the client add a comment). Separate questions with a blank line.
+Web addresses inside a hint become clickable automatically. Use `image:` lines when the client should
+look at screens and then answer (approve, rate, comment); use `[images]` only when they pick one picture.
 
 ## How to add questions
 

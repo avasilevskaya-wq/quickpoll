@@ -142,3 +142,34 @@ body { background: var(--ui-bg); color: var(--ui-ink-strong); font-family: var(-
   /* proximity: 4px to circle 1 above (its own), ~11px to the lower row below (not its own) */
   .qp-scale-wrap.is-long-label .qp-scale-labels span:first-child { top: calc(-1 * (var(--k) + 33px)); }
 }
+
+/* ---------- link button + auto links in the hint ---------- */
+.qp-autolink { color: var(--ui-ink-strong); text-decoration: underline; text-decoration-color: rgba(var(--ui-cast), .6); text-underline-offset: 2px; overflow-wrap: anywhere; }
+.qp-autolink:hover { text-decoration-color: var(--ui-mark); }
+.qp-qlink-wrap { margin: -8px 0 22px; }
+a.ui-btn { text-decoration: none; }
+.qp-qlink .ui-btn__face svg { width: 15px; height: 15px; }
+
+/* ---------- pictures that belong to the question ---------- */
+.qp-media { display: grid; gap: 14px; margin: 0 0 24px; grid-template-columns: minmax(0, 1fr); }
+.qp-media-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.qp-media-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@container (max-width: 520px) { .qp-media-2, .qp-media-3 { grid-template-columns: minmax(0, 1fr); } }
+.qp-media-item {
+  position: relative; display: block; width: 100%; padding: 6px; border: 0; border-radius: 18px; cursor: zoom-in;
+  background: linear-gradient(180deg, var(--ui-face-top), var(--ui-face-bottom)); box-shadow: var(--ui-raised);
+  transition: transform var(--ui-t) var(--ui-ease), box-shadow var(--ui-t) var(--ui-ease);
+}
+@media (hover: hover) { .qp-media-item:hover { transform: translateY(-1px); box-shadow: var(--ui-raised-hover); } }
+.qp-media-box { display: flex; align-items: center; justify-content: center; border-radius: 13px; overflow: hidden; background: var(--ui-face-flat); aspect-ratio: 4 / 3; }
+.qp-media-1 .qp-media-box { aspect-ratio: auto; max-height: 62vh; }
+.qp-media-box img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.qp-media-1 .qp-media-box img { height: auto; max-height: 62vh; }
+.qp-media-zoom {
+  position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .72); color: var(--ui-ink-strong); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  opacity: .85; transition: opacity var(--ui-t);
+}
+.qp-media-zoom svg { width: 16px; height: 16px; }
+.qp-media-item:hover .qp-media-zoom { opacity: 1; }
+.qp-lb-choose[hidden] { display: none; }

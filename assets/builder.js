@@ -286,10 +286,13 @@
     }, q.t);
     requestAnimationFrame(function () { autosize(text); });
 
-    var hint = el('input', {
-      class: 'q-hint-input', type: 'text', placeholder: 'Hint under the question (optional)', 'aria-label': 'Hint', value: q.h || '', maxlength: '500',
-      oninput: function (e) { q.h = e.target.value; changed(); }
-    });
+    var hint = el('textarea', {
+      class: 'q-hint-input', rows: '1', placeholder: 'Hint under the question (optional)', 'aria-label': 'Hint', maxlength: '500',
+      oninput: function (e) { q.h = e.target.value.replace(/\n/g, ' '); autosize(e.target); changed(); },
+      onkeydown: function (e) { if (e.key === 'Enter') e.preventDefault(); }   // one paragraph; it wraps on its own
+    }, q.h || '');
+    requestAnimationFrame(function () { autosize(hint); });
+    var extras = questionExtras(q, i);
 
     var body;
     if (q.k === 's' || q.k === 'm') body = optionsEditor(q, i);
@@ -305,10 +308,120 @@
 
     var card = el('div', {
       class: 'panel qcard' + (i === activeQ ? ' is-active' : ''), 'data-i': String(i), id: 'q-' + i
-    }, [head, text, hint, el('div', { class: 'q-err', hidden: true }), body, foot]);
+    }, [head, text, hint, extras, el('div', { class: 'q-err', hidden: true }), body, foot]);
     card.addEventListener('focusin', function () { if (activeQ !== i) setActive(i); });
     card.addEventListener('mousedown', function () { if (activeQ !== i) setActive(i); });
     return card;
+  }
+
+  /* ---------- Link button + pictures for any question ---------- */
+  var LINK_SVG = '<path d="M8.5 11.5a3 3 0 0 0 4.2 0l2.6-2.6a3 3 0 0 0-4.2-4.2l-.9.9M11.5 8.5a3 3 0 0 0-4.2 0L4.7 11.1a3 3 0 0 0 4.2 4.2l.9-.9"/>';
+  var IMG_SVG = '<rect x="3" y="4" width="14" height="12" rx="2.6"/><circle cx="7.3" cy="8.2" r="1.4"/><path d="M3.6 14.2l4-4 3 3 2-2 3.8 3.6"/>';
+  function hostOf(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u; } }
+  var mediaUploading = {};   // qIndex -> number of pictures uploading
+
+  function questionExtras(q, i) {
+    var wrap = el('div', { class: 'q-extras' });
+    var adds = el('div', { class: 'q-extras-add' });
+    if (!(q.w && q.w[1])) adds.appendChild(el('button', { class: 'btn btn-sm btn-quiet', type: 'button', onclick: function () { openLinkDialog(i); } }, [svgIcon(LINK_SVG), 'Add link']));
+    if (!(q.m && q.m.length) && !mediaUploading[i]) adds.appendChild(el('button', { class: 'btn btn-sm btn-quiet', type: 'button', onclick: function () { q.m = q.m || []; q._showMedia = true; rerenderCard(i, '.media-url'); } }, [svgIcon(IMG_SVG), 'Add pictures']));
+    if (q.w && q.w[1]) {
+      wrap.appendChild(el('div', { class: 'q-linkchip' }, [
+        svgIcon(LINK_SVG),
+        el('button', { class: 'q-linkchip-main', type: 'button', title: 'Edit link', onclick: function () { openLinkDialog(i); } }, [
+          el('strong', { text: q.w[0] || 'Open link' }), el('span', { text: hostOf(q.w[1]) })
+        ]),
+        el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Remove link', title: 'Remove link', onclick: function () { delete q.w; rerenderCard(i); changed({ goTo: i }); } }, '✕')
+      ]));
+    }
+    if ((q.m && q.m.length) || q._showMedia || mediaUploading[i]) wrap.appendChild(mediaEditor(q, i));
+    if (adds.childNodes.length) wrap.appendChild(adds);
+    return wrap;
+  }
+
+  function mediaEditor(q, i) {
+    q.m = q.m || [];
+    var box = el('div', { class: 'media-ed' });
+    var thumbs = el('div', { class: 'media-thumbs' });
+    q.m.forEach(function (u, j) {
+      var s = QP.safeUrl(u);
+      thumbs.appendChild(el('div', { class: 'media-thumb', style: s ? 'background-image:url("' + s.replace(/"/g, '%22') + '")' : '' }, [
+        el('button', { class: 'media-x', type: 'button', 'aria-label': 'Remove picture ' + (j + 1), title: 'Remove', onclick: function () {
+          q.m.splice(j, 1); if (!q.m.length) { delete q.m; delete q._showMedia; } rerenderCard(i); changed({ goTo: i });
+        } }, '✕')
+      ]));
+    });
+    for (var u = 0; u < (mediaUploading[i] || 0); u++) thumbs.appendChild(el('div', { class: 'media-thumb is-busy' }, el('span', { class: 'spin', 'aria-label': 'Uploading' })));
+    thumbs.appendChild(el('button', { class: 'media-add', type: 'button', title: 'Upload pictures', 'aria-label': 'Upload pictures', onclick: function () { openUploadDialog(i, 'media'); } }, '+'));
+    var url = el('input', {
+      class: 'opt-input url media-url', type: 'text', placeholder: 'Paste picture (Ctrl+V) or link', 'aria-label': 'Picture link',
+      onkeydown: function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        var v = QP.safeUrl(e.target.value.trim());
+        if (!v) { toast('That doesn’t look like a picture link'); return; }
+        q.m.push(v); rerenderCard(i, '.media-url'); changed({ goTo: i });
+      },
+      onpaste: function (e) {
+        var txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
+        var urls = txt.split(/\s+/).map(function (x) { return QP.safeUrl(x); }).filter(Boolean);
+        if (!urls.length) return;
+        e.preventDefault();
+        q.m = q.m.concat(urls); rerenderCard(i, '.media-url'); changed({ goTo: i });
+      }
+    });
+    box.appendChild(el('div', { class: 'media-head' }, [svgIcon(IMG_SVG), el('span', { text: 'Pictures with the question — to look at, not to choose' })]));
+    box.appendChild(thumbs);
+    box.appendChild(url);
+    return box;
+  }
+
+  function addMediaFiles(i, files) {
+    var q = survey.q[i];
+    if (!q || !files.length) return;
+    var qref = q;
+    q.m = q.m || [];
+    mediaUploading[i] = (mediaUploading[i] || 0) + files.length;
+    rerenderCard(i);
+    var done = 0, failed = null, results = [];
+    files.forEach(function (file, n) {
+      uploadImage(file).then(function (url) { results[n] = url; }, function (err) { failed = err; }).then(function () {
+        done++;
+        if (done < files.length) return;
+        mediaUploading[i] = Math.max(0, (mediaUploading[i] || 0) - files.length);
+        if (survey.q[i] === qref) { qref.m = (qref.m || []).concat(results.filter(Boolean)); if (!qref.m.length) delete qref.m; rerenderCard(i); }
+        changed({ goTo: i });
+        if (failed && failed.message === 'needs-key') { toast('Add your upload key in Settings first'); openSettings(true); }
+        else if (failed) toast(failed.message);
+        else toast(files.length === 1 ? 'Picture added' : files.length + ' pictures added');
+      });
+    });
+  }
+
+  /* Link button dialog */
+  var linkTarget = -1;
+  function openLinkDialog(i) {
+    linkTarget = i;
+    var q = survey.q[i];
+    $('qlink-text').value = (q.w && q.w[0]) || '';
+    $('qlink-url').value = (q.w && q.w[1]) || '';
+    $('qlink-err').hidden = true;
+    $('qlink-remove').hidden = !(q.w && q.w[1]);
+    $('dlg-qlink').showModal();
+    $(q.w && q.w[1] ? 'qlink-text' : 'qlink-url').focus();
+  }
+  function saveLinkDialog() {
+    var q = survey.q[linkTarget];
+    if (!q) return $('dlg-qlink').close();
+    var raw = $('qlink-url').value.trim();
+    if (raw && !/^[a-z][a-z0-9+.-]*:/i.test(raw)) raw = 'https://' + raw;
+    var u = QP.safeUrl(raw);
+    var err = $('qlink-err');
+    if (!u) { err.hidden = false; err.textContent = 'Paste a full web address, e.g. https://www.figma.com/…'; $('qlink-url').focus(); return; }
+    var t = $('qlink-text').value.trim() || 'Open link';
+    q.w = [t.slice(0, 60), u];
+    $('dlg-qlink').close();
+    rerenderCard(linkTarget); changed({ goTo: linkTarget });
   }
 
   function splitPasted(text) {
@@ -522,7 +635,7 @@
     if (!uploadTarget || !files.length) return;
     var t = uploadTarget;
     $('dlg-upload').close();
-    addImageFiles(t.i, files, t.row);
+    if (t.row === 'media') addMediaFiles(t.i, files); else addImageFiles(t.i, files, t.row);
   }
 
   function imagesEditor(q, i) {
@@ -608,10 +721,8 @@
     var card = e.target && e.target.closest ? e.target.closest('.qcard') : null;
     var i = card ? Number(card.getAttribute('data-i')) : activeQ;
     if (i < 0 || !survey.q[i]) return;
-    if (survey.q[i].k !== 'i') {
-      toast('To use pictures, switch this question to “Image choice”');
-      return;
-    }
+    if (survey.q[i].k !== 'i') { e.preventDefault(); addMediaFiles(i, files); return; }
+    if (e.target && e.target.classList && e.target.classList.contains('media-url')) { e.preventDefault(); addMediaFiles(i, files); return; }
     e.preventDefault();
     var rowAttr = e.target && e.target.getAttribute ? e.target.getAttribute('data-row') : null;
     addImageFiles(i, files, rowAttr !== null ? Number(rowAttr) : undefined);
@@ -637,7 +748,7 @@
     if (!files.length) return;
     e.preventDefault();
     var i = Number(card.getAttribute('data-i'));
-    if (survey.q[i].k !== 'i') { toast('To use pictures, switch this question to “Image choice”'); return; }
+    if (survey.q[i].k !== 'i' || (e.target.closest && e.target.closest('.media-ed'))) { addMediaFiles(i, files); return; }
     addImageFiles(i, files);
   });
 
@@ -1011,6 +1122,13 @@
     });
     $('dlg-upload').addEventListener('paste', function (e) { var f = filesFrom(e.clipboardData); if (f.length) { e.preventDefault(); e.stopPropagation(); uploadFromDialog(f); } });
   })();
+  $('qlink-save').addEventListener('click', saveLinkDialog);
+  $('qlink-url').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); saveLinkDialog(); } });
+  $('qlink-text').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); saveLinkDialog(); } });
+  $('qlink-remove').addEventListener('click', function () {
+    var q = survey.q[linkTarget]; if (q) { delete q.w; rerenderCard(linkTarget); changed({ goTo: linkTarget }); }
+    $('dlg-qlink').close();
+  });
   $('import-link').addEventListener('keydown', function (e) { if (e.key === 'Enter') importLink(); });
   $('btn-restart').addEventListener('click', function () { runner.reset(); });
   $('sw-edit').addEventListener('click', function () { document.body.classList.remove('show-preview'); $('sw-edit').classList.add('is-on'); $('sw-preview').classList.remove('is-on'); });

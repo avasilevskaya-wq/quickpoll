@@ -93,7 +93,7 @@ async function uploadLocalImages(text, file, opts) {
   const notes = [];
   let endpoint = null, changed = false;
   for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/^(\s*[-*•]\s*.*\|\s*)(.+?)\s*$/);
+    const m = lines[i].match(/^(\s*[-*•]\s*.*\|\s*)(.+?)\s*$/) || lines[i].match(/^(\s*image\s*:\s*)(.+?)\s*$/i);
     if (!m || /^https?:\/\//i.test(m[2])) continue;
     const p = path.resolve(dir, m[2].replace(/^["']|["']$/g, ''));
     if (!fs.existsSync(p)) { notes.push('Image not found: ' + m[2]); continue; }
@@ -131,6 +131,8 @@ function summary(QP, s) {
     const flags = [names[q.k], q.r ? 'required' : 'optional', q.c ? 'comment' : ''].filter(Boolean).join(', ');
     out.push(`${i + 1}. ${q.t}  (${flags})`);
     if (q.o) q.o.forEach((o, n) => out.push('   - ' + o + (q.k === 'i' ? '  ' + (!(q.i || [])[n] ? '[NO IMAGE]' : /^https:\/\/pending\.upload\//.test(q.i[n]) ? '[image, will upload]' : '[image]') : '')));
+    if (q.w) out.push('   link button: ' + q.w[0] + ' → ' + q.w[1]);
+    if (q.m) out.push('   pictures: ' + q.m.length + (q.m.some(u => /^https:\/\/pending\.upload\//.test(u)) ? ' (some will upload)' : ''));
     if (q.k === 'r') out.push('   1–' + q.s + (q.l && (q.l[0] || q.l[1]) ? ': ' + q.l[0] + ' … ' + q.l[1] : ''));
   });
   return out.join('\n');
