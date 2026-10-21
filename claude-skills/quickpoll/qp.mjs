@@ -7,8 +7,11 @@
  *
  * The draft is the same text format as the builder's "Text" tab. Extras:
  *   - lines starting with // are notes for you and the team, they never reach the client;
- *   - image options may point to local files:  - Option A | ./designs/a.png
+ *   - pictures may point to local files, both in image options and in "image:" lines:
+ *         - Option A | ./designs/a.png        (an [images] question: the client picks one)
+ *         image: ./designs/step-1.png         (any question: a picture to look at)
  *     they are uploaded to the "QuickPoll images" folder on Google Drive (needs the upload key).
+ *   - "link: Button text | https://…" adds a link button under the hint (passed through as is).
  *
  * The poll format code is loaded from the live QuickPoll site (assets/shared.js), so this
  * script always speaks the same format as the builder. Set QUICKPOLL_DIR to a local copy
@@ -84,7 +87,7 @@ function readDraft(file) {
   return fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(l => !/^\s*\/\//.test(l)).join('\n');
 }
 
-/* Local image paths in "- Label | path" lines → uploaded URLs (cached next to the draft). */
+/* Local image paths in "- Label | path" and "image: path" lines → uploaded URLs (cached next to the draft). */
 async function uploadLocalImages(text, file, opts) {
   const dir = path.dirname(path.resolve(file));
   const cacheFile = path.join(dir, '.quickpoll-cache.json');

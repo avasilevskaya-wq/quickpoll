@@ -56,8 +56,26 @@ Flags go inside the brackets, comma-separated: `multi`, `yes/no`, `1-5` / `1-10`
 `: low | high` labels), `images` (+ `grid` / `row` / `full` layout), `text`, `optional`
 (choice questions are required by default), `required` (for text questions), `comment`
 (lets the client add a comment). Separate questions with a blank line.
-Web addresses inside a hint become clickable automatically. Use `image:` lines when the client should
-look at screens and then answer (approve, rate, comment); use `[images]` only when they pick one picture.
+Web addresses inside a hint become clickable automatically.
+
+### Link button and pictures (any question type)
+
+Put these lines under the question, after the `?` hint (if any) and before the options:
+
+- `link: Button text | https://…` — one link button per question, shown under the hint, opens in
+  a new tab. Use it for a prototype, a Figma file, a doc. Button text up to ~60 characters; if the
+  text is left out, the button says "Open link". The address must be a full `https://` link.
+- `image: path-or-link` — a picture shown with the question, **to look at, not to choose**: the
+  client can enlarge and page through the pictures, then answers the question as usual
+  (yes/no, scale, options, text, comment). One `image:` line per picture, up to 12, in the order
+  they should appear. A local path (relative to the draft, e.g. `images/step-1.png`) is uploaded
+  on build, exactly like local paths in `[images]` options; an `https://` link is used as is.
+
+When to use which:
+- the client should **look at screens and then react** (approve, rate, comment) → `image:` lines
+  on a `[yes/no]`, `[1-5]`, choice or text question;
+- the client should **pick one of several pictures** → an `[images]` question with `- Label | path`
+  options.
 
 ## How to add questions
 
@@ -67,9 +85,12 @@ look at screens and then answer (approve, rate, comment); use `[images]` only wh
    Prefer `[images]` when the choice is visual (design variants, screens, layouts).
 3. Put context in a `//` note above the question: where it came from (design session, BA call),
    date, what the team needs the answer for. This helps later when reading the answers.
-4. Images: save the exact variants (export or screenshot) into `quickpoll/images/` with clear
-   names and reference them by relative path. Up to 8 MB each, png/jpg/gif/webp.
-5. Run `node "<this skill's folder>/qp.mjs" check quickpoll/<poll>.md` and show the user the
+4. Images: save the exact variants or screens (export or screenshot) into `quickpoll/images/` with
+   clear names and reference them by relative path — in `[images]` options (`- Label | path`) or in
+   `image:` lines. Up to 8 MB each, png/jpg/gif/webp.
+5. A link the client should open (prototype, Figma, doc) goes into a `link:` line, not into the
+   question text. A link mentioned in passing can stay in the `?` hint — it becomes clickable.
+6. Run `node "<this skill's folder>/qp.mjs" check quickpoll/<poll>.md` and show the user the
    short summary it prints, plus any PROBLEMS. Fix problems in the draft, not in the output.
 
 ## How to build the poll
@@ -77,7 +98,7 @@ look at screens and then answer (approve, rate, comment); use `[images]` only wh
 When the user asks to build / get the link / send the poll:
 
 1. `node "<this skill's folder>/qp.mjs" build quickpoll/<poll>.md`
-   It uploads local images (once — cached in `quickpoll/.quickpoll-cache.json`), checks the poll
+   It uploads local images from `[images]` options and `image:` lines (once — cached in `quickpoll/.quickpoll-cache.json`), checks the poll
    and prints two links:
    - **CLIENT LINK** — this is what the client opens;
    - **EDIT IN BUILDER** — opens the poll in the QuickPoll builder to review or tweak by hand.
